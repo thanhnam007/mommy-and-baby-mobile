@@ -1,0 +1,25 @@
+workflows:
+  ios-unsigned-workflow:
+    name: iOS Build (Unsigned IPA)
+    instance_type: mac_mini_m1
+    max_build_duration: 60
+    environment:
+      flutter: stable
+      xcode: latest
+      cocoapods: default
+    scripts:
+      - name: Get Flutter packages
+        script: |
+          flutter packages pub get
+      - name: Build iOS unsigned
+        script: |
+          flutter build ios --release --no-codesign
+      - name: Package to IPA
+        script: |
+          mkdir -p Payload
+          cp -r build/ios/iphoneos/Runner.app Payload/
+          zip -r -y mommy_baby.ipa Payload
+          rm -rf Payload
+    artifacts:
+      - mommy_baby.ipa
+      - "**/*.ipa"
