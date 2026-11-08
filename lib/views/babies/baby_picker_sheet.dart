@@ -10,7 +10,8 @@ class BabyPickerSheet extends StatelessWidget {
     final nameCtrl = TextEditingController();
     final nickCtrl = TextEditingController();
     String gender = 'boy';
-    DateTime birthDate = DateTime.now().subtract(const Duration(days: 60));
+    DateTime birthDate = DateTime.now();
+    bool isCreating = false;
 
     showModalBottomSheet(
       context: context,
@@ -87,27 +88,50 @@ class BabyPickerSheet extends StatelessWidget {
                     width: double.infinity,
                     height: 48,
                     child: ElevatedButton(
-                      onPressed: () async {
-                        final name = nameCtrl.text.trim();
-                        if (name.isEmpty) return;
+                      onPressed: isCreating
+                          ? null
+                          : () async {
+                              final name = nameCtrl.text.trim();
+                              if (name.isEmpty) return;
 
-                        final babyProv = Provider.of<BabyProvider>(context, listen: false);
-                        final dateStr = '${birthDate.year}-${birthDate.month.toString().padLeft(2, '0')}-${birthDate.day.toString().padLeft(2, '0')}';
-                        final ok = await babyProv.createBaby({
-                          'name': name,
-                          'nickname': nickCtrl.text.trim().isNotEmpty ? nickCtrl.text.trim() : null,
-                          'gender': gender,
-                          'birth_date': dateStr,
-                        });
+                              setState(() => isCreating = true);
+                              try {
+                                final babyProv = Provider.of<BabyProvider>(context, listen: false);
+                                final dateStr = '${birthDate.year}-${birthDate.month.toString().padLeft(2, '0')}-${birthDate.day.toString().padLeft(2, '0')}';
+                                final ok = await babyProv.createBaby({
+                                  'name': name,
+                                  'nickname': nickCtrl.text.trim().isNotEmpty ? nickCtrl.text.trim() : null,
+                                  'gender': gender,
+                                  'birth_date': dateStr,
+                                });
 
-                        if (ctx.mounted) Navigator.pop(ctx);
-                        if (context.mounted && ok) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('Đã thêm hồ sơ bé thành công! 🎉')),
-                          );
-                        }
-                      },
-                      child: const Text('Tạo hồ sơ bé'),
+                                if (ctx.mounted) Navigator.pop(ctx);
+                                if (context.mounted && ok) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(content: Text('Đã thêm hồ sơ bé thành công! 🎉')),
+                                  );
+                                }
+                              } finally {
+                                if (ctx.mounted) {
+                                  setState(() => isCreating = false);
+                                }
+                              }
+                            },
+                      child: isCreating
+                          ? const Row(
+                              mainAxisSize: MainAxisSize.min,
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                SizedBox(
+                                  width: 18,
+                                  height: 18,
+                                  child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                                ),
+                                SizedBox(width: 8),
+                                Text('Đang tạo hồ sơ...', style: TextStyle(fontWeight: FontWeight.bold)),
+                              ],
+                            )
+                          : const Text('Tạo hồ sơ bé'),
                     ),
                   ),
                 ],

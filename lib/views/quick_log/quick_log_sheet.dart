@@ -28,7 +28,7 @@ class _QuickLogSheetState extends State<QuickLogSheet> {
 
   // Breast
   String _breastSide = 'left';
-  final _breastMinutesController = TextEditingController(text: '15');
+  final _breastMinutesController = TextEditingController();
 
   // Sleep
   String _sleepQuality = 'good';
@@ -38,6 +38,11 @@ class _QuickLogSheetState extends State<QuickLogSheet> {
 
   // Notes
   final _notesController = TextEditingController();
+
+  // Loading state flags
+  bool _isSubmitting = false;
+  bool _isSleepingToggleLoading = false;
+  bool _isFeedingToggleLoading = false;
 
   @override
   void dispose() {
@@ -57,11 +62,35 @@ class _QuickLogSheetState extends State<QuickLogSheet> {
       if (action == 'sleep' || action == 'breast') {
         _endDate = null;
         _endTime = null;
+        if (action == 'breast') {
+          _breastMinutesController.text = '';
+        }
       } else {
         _endDate = _startDate;
         _endTime = _startTime;
       }
     });
+  }
+
+  void _syncBreastEndTimeFromMinutes(int mins) {
+    final start = DateTime(_startDate.year, _startDate.month, _startDate.day, _startTime.hour, _startTime.minute);
+    final end = start.add(Duration(minutes: mins));
+    setState(() {
+      _endDate = DateTime(end.year, end.month, end.day);
+      _endTime = TimeOfDay(hour: end.hour, minute: end.minute);
+    });
+  }
+
+  void _syncBreastMinutesFromEnd() {
+    if (_endTime == null) {
+      _breastMinutesController.text = '';
+      return;
+    }
+    final start = DateTime(_startDate.year, _startDate.month, _startDate.day, _startTime.hour, _startTime.minute);
+    final ed = _endDate ?? _startDate;
+    final end = DateTime(ed.year, ed.month, ed.day, _endTime!.hour, _endTime!.minute);
+    final diff = end.difference(start).inMinutes;
+    _breastMinutesController.text = (diff >= 0 ? diff : 0).toString();
   }
 
   void _pickStartDateTime(BuildContext context) async {
@@ -82,6 +111,17 @@ class _QuickLogSheetState extends State<QuickLogSheet> {
     setState(() {
       _startDate = pickedDate;
       _startTime = pickedTime;
+      if (_selectedAction == 'breast') {
+        final mins = int.tryParse(_breastMinutesController.text.trim());
+        if (mins != null && mins >= 0) {
+          final start = DateTime(pickedDate.year, pickedDate.month, pickedDate.day, pickedTime.hour, pickedTime.minute);
+          final end = start.add(Duration(minutes: mins));
+          _endDate = DateTime(end.year, end.month, end.day);
+          _endTime = TimeOfDay(hour: end.hour, minute: end.minute);
+        } else if (_endTime != null) {
+          _syncBreastMinutesFromEnd();
+        }
+      }
     });
   }
 
@@ -93,8 +133,36 @@ class _QuickLogSheetState extends State<QuickLogSheet> {
     if (pickedTime == null) return;
 
     setState(() {
-      _endDate = _startDate;
       _endTime = pickedTime;
+      if (_selectedAction == 'sleep') {
+        if (pickedTime.hour < _startTime.hour || (pickedTime.hour == _startTime.hour && pickedTime.minute < _startTime.minute)) {
+          _endDate = _startDate.add(const Duration(days: 1));
+        } else if (_endDate == null) {
+          _endDate = _startDate;
+        }
+      } else {
+        _endDate = _startDate;
+      }
+      if (_selectedAction == 'breast') {
+        _syncBreastMinutesFromEnd();
+      }
+    });
+  }
+
+  void _pickEndDate(BuildContext context) async {
+    final pickedDate = await showDatePicker(
+      context: context,
+      initialDate: _endDate ?? _startDate,
+      firstDate: _startDate.subtract(const Duration(days: 1)),
+      lastDate: DateTime.now().add(const Duration(days: 365)),
+    );
+    if (pickedDate == null) return;
+    setState(() {
+      _endDate = pickedDate;
+      if (_endTime == null) _endTime = TimeOfDay.now();
+      if (_selectedAction == 'breast') {
+        _syncBreastMinutesFromEnd();
+      }
     });
   }
 
@@ -102,7 +170,10 @@ class _QuickLogSheetState extends State<QuickLogSheet> {
     if (_endTime == null) return 0;
     final start = DateTime(_startDate.year, _startDate.month, _startDate.day, _startTime.hour, _startTime.minute);
     final ed = _endDate ?? _startDate;
-    final end = DateTime(ed.year, ed.month, ed.day, _endTime!.hour, _endTime!.minute);
+    var end = DateTime(ed.year, ed.month, ed.day, _endTime!.hour, _endTime!.minute);
+    if (_endDate == null && end.isBefore(start)) {
+      end = end.add(const Duration(days: 1));
+    }
     final diff = end.difference(start).inMinutes;
     return diff > 0 ? diff : 0;
   }
@@ -118,8 +189,12 @@ class _QuickLogSheetState extends State<QuickLogSheet> {
   }
 
   void _submit(BuildContext context) async {
+    if (_isSubmitting) return;
+
     final baby = Provider.of<BabyProvider>(context, listen: false).activeBaby;
     if (baby == null) return;
+
+    setState(() => _isSubmitting = true);
     final activity = Provider.of<ActivityProvider>(context, listen: false);
     final notes = _notesController.text.trim().isNotEmpty ? _notesController.text.trim() : null;
 
@@ -141,56 +216,68 @@ class _QuickLogSheetState extends State<QuickLogSheet> {
         _endTime!.hour,
         _endTime!.minute,
       );
+      if (_endDate == null && endDateTime.isBefore(startDateTime)) {
+        endDateTime = endDateTime.add(const Duration(days: 1));
+      }
     }
 
-    bool ok = false;
-    if (_selectedAction == 'bottle') {
-      final ml = int.tryParse(_amountMlController.text) ?? 100;
-      ok = await activity.logBottleFeeding(baby.id, ml, time: startDateTime, notes: notes);
-    } else if (_selectedAction == 'solid') {
-      final grams = int.tryParse(_solidAmountController.text) ?? 80;
-      ok = await activity.logSolid(baby.id, grams, time: startDateTime, notes: notes);
-    } else if (_selectedAction == 'sleep') {
-      if (endDateTime == null) {
-        // Ongoing sleep
-        ok = await activity.startSleep(baby.id, startTime: startDateTime, notes: notes);
-      } else {
-        ok = await activity.manualSleep(baby.id, startDateTime, endDateTime, sleepQuality: _sleepQuality, notes: notes);
-      }
-    } else if (_selectedAction == 'breast') {
-      if (endDateTime == null) {
-        // Ongoing breast feeding
-        ok = await activity.startBreastFeeding(baby.id, _breastSide, startTime: startDateTime, notes: notes);
-      } else {
-        int durationMins = max(1, endDateTime.difference(startDateTime).inMinutes);
-        if (_breastMinutesController.text.trim().isNotEmpty) {
-          durationMins = int.tryParse(_breastMinutesController.text.trim()) ?? durationMins;
+    try {
+      bool ok = false;
+      if (_selectedAction == 'bottle') {
+        final ml = int.tryParse(_amountMlController.text) ?? 100;
+        ok = await activity.logBottleFeeding(baby.id, ml, time: startDateTime, notes: notes);
+      } else if (_selectedAction == 'solid') {
+        final grams = int.tryParse(_solidAmountController.text) ?? 80;
+        ok = await activity.logSolid(baby.id, grams, time: startDateTime, notes: notes);
+      } else if (_selectedAction == 'sleep') {
+        if (endDateTime == null) {
+          // Ongoing sleep
+          ok = await activity.startSleep(baby.id, startTime: startDateTime, notes: notes);
+        } else {
+          ok = await activity.manualSleep(baby.id, startDateTime, endDateTime, sleepQuality: _sleepQuality, notes: notes);
         }
-        ok = await activity.manualBreastFeeding(
-          baby.id,
-          startDateTime,
-          endDateTime,
-          side: _breastSide,
-          minutes: durationMins,
-          notes: notes,
+      } else if (_selectedAction == 'breast') {
+        if (endDateTime == null) {
+          // Ongoing breast feeding
+          ok = await activity.startBreastFeeding(baby.id, _breastSide, startTime: startDateTime, notes: notes);
+        } else {
+          int durationMins = 0;
+          if (_breastMinutesController.text.trim().isNotEmpty) {
+            durationMins = int.tryParse(_breastMinutesController.text.trim()) ?? 0;
+          } else {
+            final diff = endDateTime.difference(startDateTime).inMinutes;
+            durationMins = diff >= 0 ? diff : 0;
+          }
+          ok = await activity.manualBreastFeeding(
+            baby.id,
+            startDateTime,
+            endDateTime,
+            side: _breastSide,
+            minutes: durationMins,
+            notes: notes,
+          );
+        }
+      } else if (_selectedAction == 'diaper') {
+        ok = await activity.logDiaper(baby.id, _diaperType, time: startDateTime, notes: notes);
+      } else if (_selectedAction == 'bath') {
+        ok = await activity.logBath(baby.id, time: startDateTime, notes: notes);
+      } else if (_selectedAction == 'play') {
+        ok = await activity.logPlay(baby.id, 20, time: startDateTime, notes: notes);
+      }
+
+      if (context.mounted) {
+        Navigator.of(context).pop();
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(ok ? 'Đã ghi nhận cữ sinh hoạt thành công! 🎉' : 'Đã có lỗi xảy ra'),
+            backgroundColor: ok ? AppTheme.emerald500 : Colors.redAccent,
+          ),
         );
       }
-    } else if (_selectedAction == 'diaper') {
-      ok = await activity.logDiaper(baby.id, _diaperType, time: startDateTime, notes: notes);
-    } else if (_selectedAction == 'bath') {
-      ok = await activity.logBath(baby.id, time: startDateTime, notes: notes);
-    } else if (_selectedAction == 'play') {
-      ok = await activity.logPlay(baby.id, 20, time: startDateTime, notes: notes);
-    }
-
-    if (context.mounted) {
-      Navigator.of(context).pop();
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(ok ? 'Đã ghi nhận cữ sinh hoạt thành công! 🎉' : 'Đã có lỗi xảy ra'),
-          backgroundColor: ok ? AppTheme.emerald500 : Colors.redAccent,
-        ),
-      );
+    } finally {
+      if (mounted) {
+        setState(() => _isSubmitting = false);
+      }
     }
   }
 
@@ -311,18 +398,33 @@ class _QuickLogSheetState extends State<QuickLogSheet> {
                         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                       ),
-                      onPressed: () async {
-                        if (activity.isSleeping && activity.sleepSummary?.currentSleepId != null) {
-                          await activity.endSleep(baby.id, activity.sleepSummary!.currentSleepId!);
-                        } else {
-                          await activity.startSleep(baby.id);
-                        }
-                        if (context.mounted) Navigator.of(context).pop();
-                      },
-                      child: Text(
-                        activity.isSleeping ? 'Bé đã dậy ☀️' : 'Bắt đầu cữ ngủ',
-                        style: const TextStyle(fontSize: 11.5, fontWeight: FontWeight.bold),
-                      ),
+                      onPressed: _isSleepingToggleLoading
+                          ? null
+                          : () async {
+                              setState(() => _isSleepingToggleLoading = true);
+                              try {
+                                if (activity.isSleeping && activity.sleepSummary?.currentSleepId != null) {
+                                  await activity.endSleep(baby.id, activity.sleepSummary!.currentSleepId!);
+                                } else {
+                                  await activity.startSleep(baby.id);
+                                }
+                                if (context.mounted) Navigator.of(context).pop();
+                              } finally {
+                                if (mounted) {
+                                  setState(() => _isSleepingToggleLoading = false);
+                                }
+                              }
+                            },
+                      child: _isSleepingToggleLoading
+                          ? const SizedBox(
+                              width: 16,
+                              height: 16,
+                              child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                            )
+                          : Text(
+                              activity.isSleeping ? 'Bé đã dậy ☀️' : 'Bắt đầu cữ ngủ',
+                              style: const TextStyle(fontSize: 11.5, fontWeight: FontWeight.bold),
+                            ),
                     ),
                   ],
                 ),
@@ -383,18 +485,47 @@ class _QuickLogSheetState extends State<QuickLogSheet> {
                         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                       ),
-                      onPressed: () async {
-                        if (activity.isFeeding && activity.feedingSummary?.currentFeedingId != null) {
-                          await activity.endBreastFeeding(baby.id, activity.feedingSummary!.currentFeedingId!, 15);
-                        } else {
-                          await activity.startBreastFeeding(baby.id, 'left');
-                        }
-                        if (context.mounted) Navigator.of(context).pop();
-                      },
-                      child: Text(
-                        activity.isFeeding ? 'Kết thúc cữ bú' : 'Bắt đầu cữ bú mẹ',
-                        style: const TextStyle(fontSize: 11.5, fontWeight: FontWeight.bold),
-                      ),
+                      onPressed: _isFeedingToggleLoading
+                          ? null
+                          : () async {
+                              setState(() => _isFeedingToggleLoading = true);
+                              try {
+                                if (activity.isFeeding && activity.feedingSummary?.currentFeedingId != null) {
+                                  DateTime start = DateTime.now();
+                                  if (activity.feedingSummary?.currentFeedingStart != null) {
+                                    try {
+                                      start = DateTime.parse(activity.feedingSummary!.currentFeedingStart!).toLocal();
+                                    } catch (_) {}
+                                  }
+                                  final now = DateTime.now();
+                                  final diff = now.difference(start).inMinutes;
+                                  final actualMinutes = diff >= 0 ? diff : 0;
+                                  await activity.endBreastFeeding(
+                                    baby.id,
+                                    activity.feedingSummary!.currentFeedingId!,
+                                    actualMinutes,
+                                    endTime: now,
+                                  );
+                                } else {
+                                  await activity.startBreastFeeding(baby.id, 'left');
+                                }
+                                if (context.mounted) Navigator.of(context).pop();
+                              } finally {
+                                if (mounted) {
+                                  setState(() => _isFeedingToggleLoading = false);
+                                }
+                              }
+                            },
+                      child: _isFeedingToggleLoading
+                          ? const SizedBox(
+                              width: 16,
+                              height: 16,
+                              child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                            )
+                          : Text(
+                              activity.isFeeding ? 'Kết thúc cữ bú' : 'Bắt đầu cữ bú mẹ',
+                              style: const TextStyle(fontSize: 11.5, fontWeight: FontWeight.bold),
+                            ),
                     ),
                   ],
                 ),
@@ -438,64 +569,115 @@ class _QuickLogSheetState extends State<QuickLogSheet> {
               ),
             ] else ...[
               // Date & Time Picker Row for any activity (Start Time)
-              ListTile(
-                contentPadding: const EdgeInsets.symmetric(horizontal: 12),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(14),
-                  side: BorderSide(color: isDark ? AppTheme.gray700 : AppTheme.gray200),
-                ),
-                leading: const Icon(Icons.access_time_rounded, color: AppTheme.brand500, size: 20),
-                title: Text(
-                  _selectedAction == 'sleep' || _selectedAction == 'breast' ? 'Thời gian bắt đầu' : 'Thời gian ghi cữ',
-                  style: const TextStyle(fontSize: 11),
-                ),
-                subtitle: Text(
-                  '${_startTime.hour.toString().padLeft(2, '0')}:${_startTime.minute.toString().padLeft(2, '0')} • ${_startDate.day}/${_startDate.month}/${_startDate.year}',
-                  style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
-                ),
-                trailing: const Icon(Icons.edit_calendar, size: 18),
-                onTap: () => _pickStartDateTime(context),
-              ),
-              const SizedBox(height: 10),
-
-              // End Time Picker (specifically for sleep and breast feeding, allows null/empty for ongoing!)
-              if (_selectedAction == 'sleep' || _selectedAction == 'breast') ...[
-                ListTile(
+              Material(
+                color: Colors.transparent,
+                child: ListTile(
                   contentPadding: const EdgeInsets.symmetric(horizontal: 12),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(14),
                     side: BorderSide(color: isDark ? AppTheme.gray700 : AppTheme.gray200),
                   ),
-                  leading: Icon(
-                    _endTime == null ? Icons.hourglass_top_rounded : Icons.flag_rounded,
-                    color: _endTime == null ? Colors.amber.shade700 : AppTheme.emerald500,
-                    size: 20,
+                  leading: const Icon(Icons.access_time_rounded, color: AppTheme.brand500, size: 20),
+                  title: Text(
+                    _selectedAction == 'sleep' || _selectedAction == 'breast' ? 'Thời gian bắt đầu' : 'Thời gian ghi cữ',
+                    style: const TextStyle(fontSize: 11),
                   ),
-                  title: const Text('Thời gian kết thúc', style: TextStyle(fontSize: 11)),
                   subtitle: Text(
-                    _endTime != null
-                        ? '${_endTime!.hour.toString().padLeft(2, '0')}:${_endTime!.minute.toString().padLeft(2, '0')} • ${_endDate?.day ?? _startDate.day}/${_endDate?.month ?? _startDate.month}'
-                        : 'Để trống (Đang trong cữ chưa kết thúc)',
-                    style: TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.bold,
-                      color: _endTime == null ? Colors.amber.shade700 : null,
-                    ),
+                    '${_startTime.hour.toString().padLeft(2, '0')}:${_startTime.minute.toString().padLeft(2, '0')} • ${_startDate.day}/${_startDate.month}/${_startDate.year}',
+                    style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
                   ),
-                  trailing: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      if (_endTime != null)
+                  trailing: const Icon(Icons.edit_calendar, size: 18),
+                  onTap: () => _pickStartDateTime(context),
+                ),
+              ),
+              const SizedBox(height: 10),
+
+              // End Time Picker (specifically for sleep and breast feeding, allows null/empty for ongoing!)
+              if (_selectedAction == 'sleep' || _selectedAction == 'breast') ...[
+                Material(
+                  color: Colors.transparent,
+                  child: ListTile(
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 12),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14),
+                      side: BorderSide(color: isDark ? AppTheme.gray700 : AppTheme.gray200),
+                    ),
+                    leading: Icon(
+                      _endTime == null
+                          ? Icons.hourglass_top_rounded
+                          : (_selectedAction == 'sleep' ? Icons.wb_sunny_rounded : Icons.flag_rounded),
+                      color: _endTime == null ? Colors.amber.shade700 : AppTheme.emerald500,
+                      size: 20,
+                    ),
+                    title: Text(
+                      _selectedAction == 'sleep' ? 'Thời gian thức dậy' : 'Thời gian kết thúc',
+                      style: const TextStyle(fontSize: 11),
+                    ),
+                    subtitle: Text(
+                      _endTime != null
+                          ? '${_endTime!.hour.toString().padLeft(2, '0')}:${_endTime!.minute.toString().padLeft(2, '0')} • ${_endDate?.day ?? _startDate.day}/${_endDate?.month ?? _startDate.month}/${_endDate?.year ?? _startDate.year}'
+                          : 'Để trống (Đang trong cữ chưa kết thúc)',
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.bold,
+                        color: _endTime == null ? Colors.amber.shade700 : null,
+                      ),
+                    ),
+                    trailing: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        if (_endTime != null)
+                          IconButton(
+                            icon: const Icon(Icons.close_rounded, size: 18, color: Colors.grey),
+                            tooltip: 'Để trống giờ kết thúc',
+                            onPressed: () {
+                              setState(() {
+                                _endTime = null;
+                                if (_selectedAction == 'breast') {
+                                  _breastMinutesController.text = '';
+                                }
+                              });
+                            },
+                          ),
                         IconButton(
-                          icon: const Icon(Icons.close_rounded, size: 18, color: Colors.grey),
-                          tooltip: 'Để trống giờ kết thúc',
-                          onPressed: () => setState(() => _endTime = null),
+                          icon: const Icon(Icons.event_available, size: 18, color: AppTheme.brand500),
+                          tooltip: _selectedAction == 'sleep' ? 'Chọn ngày thức dậy' : 'Chọn ngày kết thúc',
+                          onPressed: () => _pickEndDate(context),
                         ),
-                      const Icon(Icons.more_time_rounded, size: 18),
+                        const Icon(Icons.more_time_rounded, size: 18),
+                      ],
+                    ),
+                    onTap: () => _pickEndTime(context),
+                  ),
+                ),
+                if (_selectedAction == 'sleep' && _endTime != null) ...[
+                  const SizedBox(height: 6),
+                  Wrap(
+                    spacing: 6,
+                    runSpacing: 6,
+                    crossAxisAlignment: WrapCrossAlignment.center,
+                    children: [
+                      Text(
+                        'Ngày thức dậy:',
+                        style: TextStyle(fontSize: 11, color: isDark ? AppTheme.gray400 : AppTheme.gray600),
+                      ),
+                      ChoiceChip(
+                        label: Text('🌙 Cùng ngày (${_startDate.day}/${_startDate.month})', style: const TextStyle(fontSize: 11)),
+                        selected: _endDate == null || (_endDate!.year == _startDate.year && _endDate!.month == _startDate.month && _endDate!.day == _startDate.day),
+                        onSelected: (sel) {
+                          if (sel) setState(() => _endDate = _startDate);
+                        },
+                      ),
+                      ChoiceChip(
+                        label: const Text('☀️ Hôm sau (+1 ngày)', style: TextStyle(fontSize: 11)),
+                        selected: _endDate != null && _endDate!.difference(_startDate).inDays == 1,
+                        onSelected: (sel) {
+                          if (sel) setState(() => _endDate = _startDate.add(const Duration(days: 1)));
+                        },
+                      ),
                     ],
                   ),
-                  onTap: () => _pickEndTime(context),
-                ),
+                ],
                 const SizedBox(height: 8),
 
                 // Helper badge indicating status
@@ -640,14 +822,46 @@ class _QuickLogSheetState extends State<QuickLogSheet> {
                 ),
                 if (_endTime != null) ...[
                   const SizedBox(height: 12),
-                  const Text('Thời gian bú (phút):', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text('Thời gian bú (phút):', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
+                      Text(
+                        'Đồng bộ với giờ kết thúc',
+                        style: TextStyle(fontSize: 11, color: isDark ? AppTheme.gray400 : AppTheme.gray500),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 6),
+                  Wrap(
+                    spacing: 6,
+                    children: [0, 5, 10, 15, 20, 25, 30].map((m) {
+                      final isSel = _breastMinutesController.text.trim() == m.toString();
+                      return ActionChip(
+                        label: Text('$m p', style: const TextStyle(fontSize: 11)),
+                        backgroundColor: isSel ? AppTheme.brand500.withValues(alpha: 0.15) : null,
+                        side: isSel ? const BorderSide(color: AppTheme.brand500) : null,
+                        onPressed: () {
+                          _breastMinutesController.text = m.toString();
+                          _syncBreastEndTimeFromMinutes(m);
+                        },
+                      );
+                    }).toList(),
+                  ),
                   const SizedBox(height: 8),
                   TextField(
                     controller: _breastMinutesController,
                     keyboardType: TextInputType.number,
+                    onChanged: (val) {
+                      final mins = int.tryParse(val.trim());
+                      if (mins != null && mins >= 0) {
+                        _syncBreastEndTimeFromMinutes(mins);
+                      }
+                    },
                     decoration: const InputDecoration(
                       suffixText: 'phút',
                       prefixIcon: Icon(Icons.timer_outlined, size: 20),
+                      hintText: 'Nhập số phút bú, giờ kết thúc sẽ tự động nhảy...',
                     ),
                   ),
                 ],
@@ -701,11 +915,28 @@ class _QuickLogSheetState extends State<QuickLogSheet> {
                       : (_selectedAction == 'sleep'
                           ? ElevatedButton.styleFrom(backgroundColor: AppTheme.indigo500)
                           : null),
-                  onPressed: () => _submit(context),
-                  child: Text(
-                    _getSubmitButtonText(_selectedAction!),
-                    style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
-                  ),
+                  onPressed: _isSubmitting ? null : () => _submit(context),
+                  child: _isSubmitting
+                      ? const Row(
+                          mainAxisSize: MainAxisSize.min,
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            SizedBox(
+                              width: 18,
+                              height: 18,
+                              child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                            ),
+                            SizedBox(width: 8),
+                            Text(
+                              'Đang ghi nhận...',
+                              style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+                            ),
+                          ],
+                        )
+                      : Text(
+                          _getSubmitButtonText(_selectedAction!),
+                          style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+                        ),
                 ),
               ),
             ],

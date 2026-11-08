@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../core/network/api_client.dart';
 import '../core/theme/app_theme.dart';
 import '../providers/activity_provider.dart';
 import '../providers/auth_provider.dart';
@@ -193,6 +194,22 @@ class _MainLayoutState extends State<MainLayout> {
             ),
           ),
         ],
+        bottom: PreferredSize(
+          preferredSize: const Size.fromHeight(2.5),
+          child: ValueListenableBuilder<int>(
+            valueListenable: ApiClient().activeRequestsNotifier,
+            builder: (context, activeCount, _) {
+              if (activeCount > 0) {
+                return const LinearProgressIndicator(
+                  minHeight: 2.5,
+                  backgroundColor: Colors.transparent,
+                  valueColor: AlwaysStoppedAnimation<Color>(AppTheme.brand500),
+                );
+              }
+              return const SizedBox(height: 2.5);
+            },
+          ),
+        ),
       ),
 
       // 2. Left Sidebar Drawer

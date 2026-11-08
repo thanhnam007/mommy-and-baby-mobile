@@ -41,8 +41,8 @@ class _PumpingViewState extends State<PumpingView> {
           leftAmountMl,
           rightAmountMl,
           notes,
-        }) {
-          Provider.of<PumpingProvider>(context, listen: false).createRecord(
+        }) async {
+          await Provider.of<PumpingProvider>(context, listen: false).createRecord(
             babyId: babyId,
             startTime: startTime,
             endTime: endTime,
@@ -72,8 +72,8 @@ class _PumpingViewState extends State<PumpingView> {
           leftAmountMl,
           rightAmountMl,
           notes,
-        }) {
-          Provider.of<PumpingProvider>(context, listen: false).updateRecord(
+        }) async {
+          await Provider.of<PumpingProvider>(context, listen: false).updateRecord(
             rec.id,
             babyId: babyId,
             startTime: startTime,

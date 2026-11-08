@@ -26,6 +26,7 @@ class _RemindersViewState extends State<RemindersView> {
     final contentCtrl = TextEditingController();
     TimeOfDay selectedTime = TimeOfDay.now();
     String repeatType = 'daily';
+    bool isCreating = false;
 
     showModalBottomSheet(
       context: context,
@@ -102,33 +103,56 @@ class _RemindersViewState extends State<RemindersView> {
                     width: double.infinity,
                     height: 48,
                     child: ElevatedButton(
-                      onPressed: () async {
-                        final title = titleCtrl.text.trim();
-                        if (title.isEmpty) return;
+                      onPressed: isCreating
+                          ? null
+                          : () async {
+                              final title = titleCtrl.text.trim();
+                              if (title.isEmpty) return;
 
-                        final baby = Provider.of<BabyProvider>(context, listen: false).activeBaby;
-                        final reminderProv = Provider.of<ReminderProvider>(context, listen: false);
+                              setSheetState(() => isCreating = true);
+                              try {
+                                final baby = Provider.of<BabyProvider>(context, listen: false).activeBaby;
+                                final reminderProv = Provider.of<ReminderProvider>(context, listen: false);
 
-                        final now = DateTime.now();
-                        final scheduled = DateTime(now.year, now.month, now.day, selectedTime.hour, selectedTime.minute);
+                                final now = DateTime.now();
+                                final scheduled = DateTime(now.year, now.month, now.day, selectedTime.hour, selectedTime.minute);
 
-                        final ok = await reminderProv.createReminder({
-                          if (baby != null) 'baby_id': baby.id,
-                          'title': title,
-                          'content': contentCtrl.text.trim().isNotEmpty ? contentCtrl.text.trim() : title,
-                          'remind_at': scheduled.toUtc().toIso8601String(),
-                          'repeat_type': repeatType,
-                          if (repeatType == 'every_x_hours') 'interval_hours': 3,
-                        }, babyId: baby?.id);
+                                final ok = await reminderProv.createReminder({
+                                  if (baby != null) 'baby_id': baby.id,
+                                  'title': title,
+                                  'content': contentCtrl.text.trim().isNotEmpty ? contentCtrl.text.trim() : title,
+                                  'remind_at': scheduled.toUtc().toIso8601String(),
+                                  'repeat_type': repeatType,
+                                  if (repeatType == 'every_x_hours') 'interval_hours': 3,
+                                }, babyId: baby?.id);
 
-                        if (ctx.mounted) Navigator.pop(ctx);
-                        if (context.mounted && ok) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('Đã tạo lịch nhắc nhở thành công! ⏰')),
-                          );
-                        }
-                      },
-                      child: const Text('Lưu nhắc nhở'),
+                                if (ctx.mounted) Navigator.pop(ctx);
+                                if (context.mounted && ok) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(content: Text('Đã tạo lịch nhắc nhở thành công! ⏰')),
+                                  );
+                                }
+                              } finally {
+                                if (ctx.mounted) {
+                                  setSheetState(() => isCreating = false);
+                                }
+                              }
+                            },
+                      child: isCreating
+                          ? const Row(
+                              mainAxisSize: MainAxisSize.min,
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                SizedBox(
+                                  width: 18,
+                                  height: 18,
+                                  child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                                ),
+                                SizedBox(width: 8),
+                                Text('Đang tạo nhắc nhở...', style: TextStyle(fontWeight: FontWeight.bold)),
+                              ],
+                            )
+                          : const Text('Lưu nhắc nhở'),
                     ),
                   ),
                 ],

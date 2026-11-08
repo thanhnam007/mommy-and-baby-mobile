@@ -7,22 +7,95 @@ class ActivityProvider extends ChangeNotifier {
 
   FeedingSummaryModel? _feedingSummary;
   SleepSummaryModel? _sleepSummary;
-  List<ActivityModel> _timeline = [];
+  List<ActivityModel> _allTimeline = [];
   bool _isLoading = false;
+  bool _isFeedingActionLoading = false;
+  bool _isSleepActionLoading = false;
   String _selectedType = 'all';
+  String? _currentTargetDate;
 
   FeedingSummaryModel? get feedingSummary => _feedingSummary;
   SleepSummaryModel? get sleepSummary => _sleepSummary;
-  List<ActivityModel> get timeline => _timeline;
+  List<ActivityModel> get allTimeline => _allTimeline;
+  List<ActivityModel> get timeline {
+    if (_selectedType == 'all') return _allTimeline;
+    if (_selectedType == 'other') {
+      return _allTimeline
+          .where((a) => a.activityType == 'bath' || a.activityType == 'play' || a.activityType == 'other')
+          .toList();
+    }
+    return _allTimeline.where((a) => a.activityType == _selectedType).toList();
+  }
+
+  Map<String, int> get categoryCounts {
+    int feeding = 0;
+    int solid = 0;
+    int sleeping = 0;
+    int diaper = 0;
+    int other = 0;
+    for (final a in _allTimeline) {
+      switch (a.activityType) {
+        case 'feeding':
+          feeding++;
+          break;
+        case 'solid':
+          solid++;
+          break;
+        case 'sleeping':
+          sleeping++;
+          break;
+        case 'diaper':
+          diaper++;
+          break;
+        case 'bath':
+        case 'play':
+        default:
+          other++;
+          break;
+      }
+    }
+    return {
+      'all': _allTimeline.length,
+      'feeding': feeding,
+      'solid': solid,
+      'sleeping': sleeping,
+      'diaper': diaper,
+      'other': other,
+    };
+  }
+
   bool get isLoading => _isLoading;
+  bool get isFeedingActionLoading => _isFeedingActionLoading;
+  bool get isSleepActionLoading => _isSleepActionLoading;
   String get selectedType => _selectedType;
 
   bool get isSleeping => _sleepSummary?.isCurrentlySleeping ?? false;
   bool get isFeeding => _feedingSummary?.isCurrentlyFeeding ?? false;
 
   void setFilterType(String type, int babyId) {
+    if (_selectedType == type) return;
     _selectedType = type;
-    fetchTimeline(babyId);
+    notifyListeners();
+  }
+
+  @visibleForTesting
+  void setTimelineForTesting(List<ActivityModel> items) {
+    _allTimeline = List<ActivityModel>.from(items);
+    notifyListeners();
+  }
+
+  @visibleForTesting
+  void setSummariesForTesting({
+    FeedingSummaryModel? feedingSummary,
+    SleepSummaryModel? sleepSummary,
+    bool? isFeedingActionLoading,
+    bool? isSleepActionLoading,
+  }) {
+    if (feedingSummary != null) _feedingSummary = feedingSummary;
+    if (sleepSummary != null) _sleepSummary = sleepSummary;
+    if (isFeedingActionLoading != null) _isFeedingActionLoading = isFeedingActionLoading;
+    if (isSleepActionLoading != null) _isSleepActionLoading = isSleepActionLoading;
+    notifyListeners();
   }
 
   Future<void> fetchAll(int babyId) async {
@@ -31,7 +104,7 @@ class ActivityProvider extends ChangeNotifier {
 
     await Future.wait([
       fetchSummaries(babyId),
-      fetchTimeline(babyId),
+      fetchTimeline(babyId, targetDate: _currentTargetDate),
     ]);
 
     _isLoading = false;
@@ -56,11 +129,14 @@ class ActivityProvider extends ChangeNotifier {
   }
 
   Future<void> fetchTimeline(int babyId, {String? targetDate}) async {
+    if (targetDate != null) {
+      _currentTargetDate = targetDate;
+    }
     try {
-      final res = await _api.getTimeline(babyId, targetDate: targetDate, type: _selectedType);
+      final res = await _api.getTimeline(babyId, targetDate: _currentTargetDate, type: 'all');
       if (res.statusCode == 200) {
         final list = res.data as List? ?? [];
-        _timeline = list.map((item) => ActivityModel.fromJson(item)).toList();
+        _allTimeline = list.map((item) => ActivityModel.fromJson(item)).toList();
         notifyListeners();
       }
     } catch (_) {}
@@ -68,6 +144,9 @@ class ActivityProvider extends ChangeNotifier {
 
   // --- Sleep actions ---
   Future<bool> startSleep(int babyId, {DateTime? startTime, String? notes}) async {
+    if (_isSleepActionLoading) return false;
+    _isSleepActionLoading = true;
+    notifyListeners();
     try {
       final t = startTime ?? DateTime.now();
       final res = await _api.startSleep({
@@ -79,11 +158,18 @@ class ActivityProvider extends ChangeNotifier {
         await fetchAll(babyId);
         return true;
       }
-    } catch (_) {}
+    } catch (_) {
+    } finally {
+      _isSleepActionLoading = false;
+      notifyListeners();
+    }
     return false;
   }
 
   Future<bool> endSleep(int babyId, int activityId, {DateTime? endTime, String? sleepQuality, String? notes}) async {
+    if (_isSleepActionLoading) return false;
+    _isSleepActionLoading = true;
+    notifyListeners();
     try {
       final t = endTime ?? DateTime.now();
       final res = await _api.endSleep(activityId, {
@@ -95,7 +181,11 @@ class ActivityProvider extends ChangeNotifier {
         await fetchAll(babyId);
         return true;
       }
-    } catch (_) {}
+    } catch (_) {
+    } finally {
+      _isSleepActionLoading = false;
+      notifyListeners();
+    }
     return false;
   }
 
@@ -137,6 +227,9 @@ class ActivityProvider extends ChangeNotifier {
   }
 
   Future<bool> startBreastFeeding(int babyId, String side, {DateTime? startTime, String? notes}) async {
+    if (_isFeedingActionLoading) return false;
+    _isFeedingActionLoading = true;
+    notifyListeners();
     try {
       final t = startTime ?? DateTime.now();
       final res = await _api.startFeeding({
@@ -150,11 +243,18 @@ class ActivityProvider extends ChangeNotifier {
         await fetchAll(babyId);
         return true;
       }
-    } catch (_) {}
+    } catch (_) {
+    } finally {
+      _isFeedingActionLoading = false;
+      notifyListeners();
+    }
     return false;
   }
 
   Future<bool> endBreastFeeding(int babyId, int activityId, int minutes, {DateTime? endTime, String? side, String? notes}) async {
+    if (_isFeedingActionLoading) return false;
+    _isFeedingActionLoading = true;
+    notifyListeners();
     try {
       final t = endTime ?? DateTime.now();
       final res = await _api.endFeeding(activityId, {
@@ -168,7 +268,11 @@ class ActivityProvider extends ChangeNotifier {
         await fetchAll(babyId);
         return true;
       }
-    } catch (_) {}
+    } catch (_) {
+    } finally {
+      _isFeedingActionLoading = false;
+      notifyListeners();
+    }
     return false;
   }
 

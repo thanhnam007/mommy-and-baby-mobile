@@ -26,6 +26,8 @@ class _GrowthViewState extends State<GrowthView> {
     );
     final notesCtrl = TextEditingController(text: record?.notes ?? '');
 
+    bool isSaving = false;
+
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -33,106 +35,133 @@ class _GrowthViewState extends State<GrowthView> {
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
       builder: (ctx) {
-        return Padding(
-          padding: EdgeInsets.only(
-            left: 20,
-            right: 20,
-            top: 20,
-            bottom: MediaQuery.of(ctx).viewInsets.bottom + 24,
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                record != null
-                    ? 'Chỉnh sửa Số đo Chiều cao & Cân nặng'
-                    : 'Ghi nhận Số đo Chiều cao & Cân nặng',
-                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+        return StatefulBuilder(
+          builder: (ctx, setDialogState) {
+            return Padding(
+              padding: EdgeInsets.only(
+                left: 20,
+                right: 20,
+                top: 20,
+                bottom: MediaQuery.of(ctx).viewInsets.bottom + 24,
               ),
-              if (record != null)
-                Padding(
-                  padding: const EdgeInsets.only(top: 4),
-                  child: Text(
-                    'Mốc đo: ${record.recordedAt.length >= 16 ? record.recordedAt.substring(0, 16).replaceAll("T", " ") : record.recordedAt}',
-                    style: const TextStyle(fontSize: 11, color: AppTheme.brand500, fontWeight: FontWeight.w600),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    record != null
+                        ? 'Chỉnh sửa Số đo Chiều cao & Cân nặng'
+                        : 'Ghi nhận Số đo Chiều cao & Cân nặng',
+                    style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                   ),
-                ),
-              const SizedBox(height: 16),
-              TextField(
-                controller: weightCtrl,
-                keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                decoration: const InputDecoration(
-                  labelText: 'Cân nặng (kg)',
-                  hintText: 'VD: 6.8',
-                  suffixText: 'kg',
-                  prefixIcon: Icon(Icons.monitor_weight_outlined),
-                ),
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: heightCtrl,
-                keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                decoration: const InputDecoration(
-                  labelText: 'Chiều cao (cm)',
-                  hintText: 'VD: 64.5',
-                  suffixText: 'cm',
-                  prefixIcon: Icon(Icons.height_outlined),
-                ),
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: notesCtrl,
-                decoration: const InputDecoration(
-                  labelText: 'Ghi chú (tùy chọn)',
-                  prefixIcon: Icon(Icons.note_alt_outlined),
-                ),
-              ),
-              const SizedBox(height: 20),
-              SizedBox(
-                width: double.infinity,
-                height: 48,
-                child: ElevatedButton(
-                  onPressed: () async {
-                    final w = double.tryParse(weightCtrl.text);
-                    final h = double.tryParse(heightCtrl.text);
-                    if (w == null && h == null) return;
+                  if (record != null)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 4),
+                      child: Text(
+                        'Mốc đo: ${record.recordedAt.length >= 16 ? record.recordedAt.substring(0, 16).replaceAll("T", " ") : record.recordedAt}',
+                        style: const TextStyle(fontSize: 11, color: AppTheme.brand500, fontWeight: FontWeight.w600),
+                      ),
+                    ),
+                  const SizedBox(height: 16),
+                  TextField(
+                    controller: weightCtrl,
+                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                    decoration: const InputDecoration(
+                      labelText: 'Cân nặng (kg)',
+                      hintText: 'VD: 6.8',
+                      suffixText: 'kg',
+                      prefixIcon: Icon(Icons.monitor_weight_outlined),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: heightCtrl,
+                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                    decoration: const InputDecoration(
+                      labelText: 'Chiều cao (cm)',
+                      hintText: 'VD: 64.5',
+                      suffixText: 'cm',
+                      prefixIcon: Icon(Icons.height_outlined),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: notesCtrl,
+                    decoration: const InputDecoration(
+                      labelText: 'Ghi chú (tùy chọn)',
+                      prefixIcon: Icon(Icons.note_alt_outlined),
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  SizedBox(
+                    width: double.infinity,
+                    height: 48,
+                    child: ElevatedButton(
+                      onPressed: isSaving
+                          ? null
+                          : () async {
+                              final w = double.tryParse(weightCtrl.text);
+                              final h = double.tryParse(heightCtrl.text);
+                              if (w == null && h == null) return;
 
-                    final growth = Provider.of<GrowthProvider>(context, listen: false);
-                    final bool ok;
-                    if (record != null) {
-                      ok = await growth.updateRecord(
-                        record.id,
-                        babyId,
-                        w,
-                        h,
-                        notes: notesCtrl.text.isNotEmpty ? notesCtrl.text : null,
-                      );
-                    } else {
-                      ok = await growth.addRecord(
-                        babyId,
-                        w,
-                        h,
-                        notes: notesCtrl.text.isNotEmpty ? notesCtrl.text : null,
-                      );
-                    }
+                              setDialogState(() => isSaving = true);
+                              try {
+                                final growth = Provider.of<GrowthProvider>(context, listen: false);
+                                final bool ok;
+                                if (record != null) {
+                                  ok = await growth.updateRecord(
+                                    record.id,
+                                    babyId,
+                                    w,
+                                    h,
+                                    notes: notesCtrl.text.isNotEmpty ? notesCtrl.text : null,
+                                  );
+                                } else {
+                                  ok = await growth.addRecord(
+                                    babyId,
+                                    w,
+                                    h,
+                                    notes: notesCtrl.text.isNotEmpty ? notesCtrl.text : null,
+                                  );
+                                }
 
-                    if (ctx.mounted) Navigator.pop(ctx);
-                    if (context.mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text(ok
-                              ? (record != null ? 'Đã cập nhật số đo thành công! 🎉' : 'Đã lưu số đo thành công! 🎉')
-                              : 'Lỗi khi lưu số đo'),
-                        ),
-                      );
-                    }
-                  },
-                  child: Text(record != null ? 'Lưu cập nhật' : 'Lưu số đo'),
-                ),
+                                if (ctx.mounted) Navigator.pop(ctx);
+                                if (context.mounted) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      content: Text(ok
+                                          ? (record != null ? 'Đã cập nhật số đo thành công! 🎉' : 'Đã lưu số đo thành công! 🎉')
+                                          : 'Lỗi khi lưu số đo'),
+                                    ),
+                                  );
+                                }
+                              } finally {
+                                if (ctx.mounted) {
+                                  setDialogState(() => isSaving = false);
+                                }
+                              }
+                            },
+                      child: isSaving
+                          ? const Row(
+                              mainAxisSize: MainAxisSize.min,
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                SizedBox(
+                                  width: 18,
+                                  height: 18,
+                                  child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                                ),
+                                SizedBox(width: 8),
+                                Text('Đang lưu số đo...', style: TextStyle(fontWeight: FontWeight.bold)),
+                              ],
+                            )
+                          : Text(record != null ? 'Lưu cập nhật' : 'Lưu số đo'),
+                    ),
+                  ),
+                ],
               ),
-            ],
-          ),
+            );
+          },
         );
       },
     );

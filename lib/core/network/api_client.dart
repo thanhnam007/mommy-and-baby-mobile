@@ -1,4 +1,6 @@
+import 'dart:convert';
 import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../config/app_config.dart';
@@ -8,11 +10,31 @@ class ApiClient {
   factory ApiClient() => _instance;
 
   late Dio _dio;
+  Dio get dio => _dio;
   final FlutterSecureStorage _storage = const FlutterSecureStorage();
   static const String keyToken = 'jwt_auth_token';
   String? _token;
 
   Function()? onUnauthorized;
+
+  // Active requests counter for global loading indicator
+  final ValueNotifier<int> activeRequestsNotifier = ValueNotifier<int>(0);
+  int _activeRequestsCount = 0;
+
+  // In-flight mutations tracking to prevent duplicate concurrent requests
+  final Set<String> _inFlightMutations = <String>{};
+
+  void _incrementActiveRequests() {
+    _activeRequestsCount++;
+    activeRequestsNotifier.value = _activeRequestsCount;
+  }
+
+  void _decrementActiveRequests() {
+    if (_activeRequestsCount > 0) {
+      _activeRequestsCount--;
+      activeRequestsNotifier.value = _activeRequestsCount;
+    }
+  }
 
   ApiClient._internal() {
     _initDio();
@@ -34,13 +56,62 @@ class ApiClient {
     _dio.interceptors.add(
       InterceptorsWrapper(
         onRequest: (options, handler) async {
+          final method = options.method.toUpperCase();
+          final isMutating = ['POST', 'PUT', 'DELETE', 'PATCH'].contains(method);
+
+          if (isMutating) {
+            String payloadStr = '';
+            try {
+              if (options.data != null) {
+                payloadStr = options.data is Map || options.data is List
+                    ? jsonEncode(options.data)
+                    : options.data.toString();
+              }
+            } catch (_) {
+              payloadStr = options.data?.toString() ?? '';
+            }
+
+            final mutationKey = '$method:${options.path}:$payloadStr';
+            if (_inFlightMutations.contains(mutationKey)) {
+              if (kDebugMode) {
+                print('[ApiClient] Duplicate in-flight mutating request suppressed: $mutationKey');
+              }
+              return handler.reject(
+                DioException(
+                  requestOptions: options,
+                  type: DioExceptionType.cancel,
+                  error: 'Thao tác đang được xử lý, vui lòng không gửi yêu cầu lặp lại.',
+                ),
+              );
+            }
+
+            _inFlightMutations.add(mutationKey);
+            options.extra['_inFlightKey'] = mutationKey;
+          }
+
+          _incrementActiveRequests();
+
           _token ??= await _storage.read(key: keyToken);
           if (_token != null && _token!.isNotEmpty) {
             options.headers['Authorization'] = 'Bearer $_token';
           }
           return handler.next(options);
         },
+        onResponse: (response, handler) {
+          _decrementActiveRequests();
+          final key = response.requestOptions.extra['_inFlightKey'] as String?;
+          if (key != null) {
+            _inFlightMutations.remove(key);
+          }
+          return handler.next(response);
+        },
         onError: (DioException error, handler) async {
+          _decrementActiveRequests();
+          final key = error.requestOptions.extra['_inFlightKey'] as String?;
+          if (key != null) {
+            _inFlightMutations.remove(key);
+          }
+
           final path = error.requestOptions.path;
           if (error.response?.statusCode == 401 && !path.contains('/auth/login')) {
             await clearToken();

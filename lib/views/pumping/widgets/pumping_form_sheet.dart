@@ -5,7 +5,7 @@ import '../../../models/pumping_model.dart';
 
 class PumpingFormSheet extends StatefulWidget {
   final PumpingRecordModel? record;
-  final Function({
+  final Future<void> Function({
     required DateTime startTime,
     required DateTime endTime,
     required int amountMl,
@@ -28,6 +28,7 @@ class PumpingFormSheet extends StatefulWidget {
 }
 
 class _PumpingFormSheetState extends State<PumpingFormSheet> {
+  bool _isSaving = false;
   late DateTime _startTime;
   late DateTime _endTime;
   late TextEditingController _amountCtrl;
@@ -373,32 +374,48 @@ class _PumpingFormSheetState extends State<PumpingFormSheet> {
                 ),
                 const SizedBox(width: 8),
                 ElevatedButton(
-                  onPressed: () {
-                    final amount = int.tryParse(_amountCtrl.text) ?? 0;
-                    if (amount <= 0) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Vui lòng nhập lượng sữa (ml)')),
-                      );
-                      return;
-                    }
-                    widget.onSave(
-                      startTime: _startTime,
-                      endTime: _endTime,
-                      amountMl: amount,
-                      breastSide: _breastSide,
-                      leftAmountMl: int.tryParse(_leftCtrl.text),
-                      rightAmountMl: int.tryParse(_rightCtrl.text),
-                      notes: _notesCtrl.text.trim().isNotEmpty ? _notesCtrl.text.trim() : null,
-                    );
-                    Navigator.pop(context);
-                  },
+                  onPressed: _isSaving
+                      ? null
+                      : () async {
+                          final amount = int.tryParse(_amountCtrl.text) ?? 0;
+                          if (amount <= 0) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(content: Text('Vui lòng nhập lượng sữa (ml)')),
+                            );
+                            return;
+                          }
+                          final navigator = Navigator.of(context);
+                          setState(() => _isSaving = true);
+                          try {
+                            await widget.onSave(
+                              startTime: _startTime,
+                              endTime: _endTime,
+                              amountMl: amount,
+                              breastSide: _breastSide,
+                              leftAmountMl: int.tryParse(_leftCtrl.text),
+                              rightAmountMl: int.tryParse(_rightCtrl.text),
+                              notes: _notesCtrl.text.trim().isNotEmpty ? _notesCtrl.text.trim() : null,
+                            );
+                            if (mounted) {
+                              navigator.pop();
+                            }
+                          } finally {
+                            if (mounted) setState(() => _isSaving = false);
+                          }
+                        },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppTheme.brand500,
                     foregroundColor: Colors.white,
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                     padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
                   ),
-                  child: Text(widget.record != null ? 'Cập nhật' : 'Lưu cữ hút'),
+                  child: _isSaving
+                      ? const SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                        )
+                      : Text(widget.record != null ? 'Cập nhật' : 'Lưu cữ hút'),
                 ),
               ],
             ),
