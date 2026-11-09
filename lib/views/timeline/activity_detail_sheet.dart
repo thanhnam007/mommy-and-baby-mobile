@@ -505,7 +505,8 @@ class _ActivityDetailSheetState extends State<ActivityDetailSheet> {
 
     final data = <String, dynamic>{
       'start_time': startDateTime.toUtc().toIso8601String(),
-      if (endDateTime != null) 'end_time': endDateTime.toUtc().toIso8601String(),
+      'end_time': endDateTime?.toUtc().toIso8601String(),
+      if (endDateTime == null && widget.activity.activityType == 'sleeping') 'duration_minutes': null,
       'notes': _notesCtrl.text.trim().isNotEmpty ? _notesCtrl.text.trim() : null,
     };
 

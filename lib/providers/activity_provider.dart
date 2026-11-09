@@ -143,7 +143,7 @@ class ActivityProvider extends ChangeNotifier {
   }
 
   // --- Sleep actions ---
-  Future<bool> startSleep(int babyId, {DateTime? startTime, String? notes}) async {
+  Future<bool> startSleep(int babyId, {DateTime? startTime, String? sleepQuality, String? notes}) async {
     if (_isSleepActionLoading) return false;
     _isSleepActionLoading = true;
     notifyListeners();
@@ -152,6 +152,7 @@ class ActivityProvider extends ChangeNotifier {
       final res = await _api.startSleep({
         'baby_id': babyId,
         'start_time': t.toUtc().toIso8601String(),
+        if (sleepQuality != null) 'sleep_quality': sleepQuality,
         if (notes != null) 'notes': notes,
       });
       if (res.statusCode == 200 || res.statusCode == 201) {
@@ -163,6 +164,30 @@ class ActivityProvider extends ChangeNotifier {
       _isSleepActionLoading = false;
       notifyListeners();
     }
+    return false;
+  }
+
+  Future<bool> updateSleep(
+    int babyId,
+    int activityId, {
+    required DateTime startTime,
+    DateTime? endTime,
+    String sleepQuality = 'good',
+    String? notes,
+  }) async {
+    try {
+      final res = await _api.updateActivity(activityId, {
+        'start_time': startTime.toUtc().toIso8601String(),
+        'end_time': endTime?.toUtc().toIso8601String(),
+        if (endTime == null) 'duration_minutes': null,
+        'sleep_quality': sleepQuality,
+        'notes': notes,
+      });
+      if (res.statusCode == 200) {
+        await fetchAll(babyId);
+        return true;
+      }
+    } catch (_) {}
     return false;
   }
 

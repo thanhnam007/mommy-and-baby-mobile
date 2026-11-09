@@ -54,10 +54,17 @@ class _QuickLogSheetState extends State<QuickLogSheet> {
   }
 
   void _initAction(String action) {
+    final activity = Provider.of<ActivityProvider>(context, listen: false);
     setState(() {
       _selectedAction = action;
-      _startDate = DateTime.now();
-      _startTime = TimeOfDay.now();
+      DateTime defaultStart = DateTime.now();
+      if (action == 'sleep' && activity.isSleeping && activity.sleepSummary?.currentSleepStart != null) {
+        try {
+          defaultStart = DateTime.parse(activity.sleepSummary!.currentSleepStart!).toLocal();
+        } catch (_) {}
+      }
+      _startDate = DateTime(defaultStart.year, defaultStart.month, defaultStart.day);
+      _startTime = TimeOfDay.fromDateTime(defaultStart);
       // For sleep and breast, default end time to null (ongoing) so user can explicitly pick or leave empty
       if (action == 'sleep' || action == 'breast') {
         _endDate = null;
@@ -230,9 +237,18 @@ class _QuickLogSheetState extends State<QuickLogSheet> {
         final grams = int.tryParse(_solidAmountController.text) ?? 80;
         ok = await activity.logSolid(baby.id, grams, time: startDateTime, notes: notes);
       } else if (_selectedAction == 'sleep') {
-        if (endDateTime == null) {
+        if (activity.isSleeping && activity.sleepSummary?.currentSleepId != null) {
+          ok = await activity.updateSleep(
+            baby.id,
+            activity.sleepSummary!.currentSleepId!,
+            startTime: startDateTime,
+            endTime: endDateTime,
+            sleepQuality: _sleepQuality,
+            notes: notes,
+          );
+        } else if (endDateTime == null) {
           // Ongoing sleep
-          ok = await activity.startSleep(baby.id, startTime: startDateTime, notes: notes);
+          ok = await activity.startSleep(baby.id, startTime: startDateTime, sleepQuality: _sleepQuality, notes: notes);
         } else {
           ok = await activity.manualSleep(baby.id, startDateTime, endDateTime, sleepQuality: _sleepQuality, notes: notes);
         }
@@ -700,7 +716,9 @@ class _QuickLogSheetState extends State<QuickLogSheet> {
                       Expanded(
                         child: Text(
                           _endTime == null
-                              ? 'Cữ sẽ được ghi nhận là ĐANG DIỄN RA (chưa kết thúc).'
+                              ? (_selectedAction == 'sleep' && activity.isSleeping
+                                  ? 'Cập nhật lại giờ bắt đầu ngủ và bé vẫn đang ngủ.'
+                                  : 'Cữ sẽ được ghi nhận là ĐANG DIỄN RA (chưa kết thúc).')
                               : 'Cữ đã hoàn thành (Thời lượng: ${_calculateDuration()} phút).',
                           style: TextStyle(
                             fontSize: 11,
@@ -934,7 +952,7 @@ class _QuickLogSheetState extends State<QuickLogSheet> {
                           ],
                         )
                       : Text(
-                          _getSubmitButtonText(_selectedAction!),
+                          _getSubmitButtonText(_selectedAction!, isSleeping: activity.isSleeping),
                           style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
                         ),
                 ),
@@ -967,10 +985,15 @@ class _QuickLogSheetState extends State<QuickLogSheet> {
     }
   }
 
-  String _getSubmitButtonText(String action) {
+  String _getSubmitButtonText(String action, {bool isSleeping = false}) {
     switch (action) {
       case 'sleep':
-        return _endTime == null ? 'Bắt đầu cữ ngủ (Đang diễn ra) 😴' : 'Lưu cữ ngủ 💾';
+        if (_endTime == null) {
+          return isSleeping
+              ? 'Cập nhật giờ bắt đầu ngủ (Bé vẫn đang ngủ) 😴'
+              : 'Bắt đầu cữ ngủ (Đang diễn ra) 😴';
+        }
+        return isSleeping ? 'Cập nhật & kết thúc giấc ngủ 💾' : 'Lưu cữ ngủ 💾';
       case 'breast':
         return _endTime == null ? 'Bắt đầu cữ bú mẹ (Đang diễn ra) 🤱' : 'Lưu cữ bú mẹ 💾';
       case 'solid':
