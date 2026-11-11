@@ -7,11 +7,13 @@ import '../../models/activity_model.dart';
 import '../../providers/activity_provider.dart';
 import '../../providers/baby_provider.dart';
 import '../../providers/growth_provider.dart';
+import '../../providers/milk_warming_provider.dart';
 import '../../providers/pumping_provider.dart';
 import '../media/media_gallery_view.dart';
 import '../pumping/pumping_view.dart';
 import '../reminders/reminders_view.dart';
 import '../timeline/widgets/activity_timeline_row.dart';
+import 'widgets/milk_warming_dashboard_card.dart';
 
 class DashboardView extends StatefulWidget {
   final Function(int) onTabChange;
@@ -166,6 +168,9 @@ class _DashboardViewState extends State<DashboardView> {
       onRefresh: () async {
         await activityProvider.fetchAll(baby.id);
         await growthProvider.fetchGrowth(baby.id);
+        if (context.mounted) {
+          await Provider.of<MilkWarmingProvider>(context, listen: false).fetchStatus(baby.id);
+        }
       },
       child: SingleChildScrollView(
         physics: const AlwaysScrollableScrollPhysics(),
@@ -1020,6 +1025,10 @@ class _DashboardViewState extends State<DashboardView> {
                 ),
               ),
             ),
+            const SizedBox(height: 14),
+
+            // 3.5. Milk Warming Card (Lịch hâm sữa - tách biệt với lịch sinh hoạt của bé)
+            MilkWarmingDashboardCard(babyId: baby.id),
             const SizedBox(height: 14),
 
             // 4. Bento Grid 2x2 for Utility Cards (WHO Growth, Pumping, VIP Photos, Reminders)

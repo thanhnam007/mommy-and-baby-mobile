@@ -6,12 +6,14 @@ import '../providers/activity_provider.dart';
 import '../providers/auth_provider.dart';
 import '../providers/baby_provider.dart';
 import '../providers/growth_provider.dart';
+import '../providers/milk_warming_provider.dart';
 import '../providers/theme_provider.dart';
 import 'babies/baby_picker_sheet.dart';
 import 'camera/camera_view.dart';
 import 'dashboard/dashboard_view.dart';
 import 'growth/growth_view.dart';
 import 'media/media_gallery_view.dart';
+import 'milk_warming/milk_warming_view.dart';
 import 'profile/profile_view.dart';
 import 'pumping/pumping_view.dart';
 import 'quick_log/quick_log_sheet.dart';
@@ -40,6 +42,7 @@ class _MainLayoutState extends State<MainLayout> {
         if (!mounted) return;
         Provider.of<ActivityProvider>(context, listen: false).fetchAll(babyProv.activeBaby!.id);
         Provider.of<GrowthProvider>(context, listen: false).fetchGrowth(babyProv.activeBaby!.id);
+        Provider.of<MilkWarmingProvider>(context, listen: false).fetchStatus(babyProv.activeBaby!.id);
       }
     });
   }
@@ -314,6 +317,16 @@ class _MainLayoutState extends State<MainLayout> {
                       Navigator.pop(context);
                       Navigator.of(context).push(
                         MaterialPageRoute(builder: (_) => const PumpingView()),
+                      );
+                    },
+                  ),
+                  ListTile(
+                    leading: const Text('♨️', style: TextStyle(fontSize: 18)),
+                    title: const Text('Lịch hâm sữa', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
+                    onTap: () {
+                      Navigator.pop(context);
+                      Navigator.of(context).push(
+                        MaterialPageRoute(builder: (_) => MilkWarmingView(babyId: baby?.id)),
                       );
                     },
                   ),

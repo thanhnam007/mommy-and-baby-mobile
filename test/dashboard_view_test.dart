@@ -8,6 +8,7 @@ import 'package:mommy_baby/models/baby_model.dart';
 import 'package:mommy_baby/providers/activity_provider.dart';
 import 'package:mommy_baby/providers/baby_provider.dart';
 import 'package:mommy_baby/providers/growth_provider.dart';
+import 'package:mommy_baby/providers/milk_warming_provider.dart';
 import 'package:mommy_baby/providers/pumping_provider.dart';
 import 'package:mommy_baby/views/dashboard/dashboard_view.dart';
 import 'package:mommy_baby/views/timeline/widgets/activity_timeline_row.dart';
@@ -30,6 +31,7 @@ void main() {
         ChangeNotifierProvider<ActivityProvider>.value(value: activityProvider),
         ChangeNotifierProvider<GrowthProvider>.value(value: growthProvider),
         ChangeNotifierProvider<PumpingProvider>.value(value: pumpingProvider),
+        ChangeNotifierProvider<MilkWarmingProvider>(create: (_) => MilkWarmingProvider()),
       ],
       child: MaterialApp(
         theme: AppTheme.lightTheme,

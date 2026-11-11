@@ -8,6 +8,7 @@ import 'providers/baby_provider.dart';
 import 'providers/camera_provider.dart';
 import 'providers/growth_provider.dart';
 import 'providers/media_provider.dart';
+import 'providers/milk_warming_provider.dart';
 import 'providers/pumping_provider.dart';
 import 'providers/reminder_provider.dart';
 import 'providers/theme_provider.dart';
@@ -34,6 +35,7 @@ class MommyBabyApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => GrowthProvider()),
         ChangeNotifierProvider(create: (_) => CameraProvider()),
         ChangeNotifierProvider(create: (_) => PumpingProvider()),
+        ChangeNotifierProvider(create: (_) => MilkWarmingProvider()),
         ChangeNotifierProvider(create: (_) => ReminderProvider()),
         ChangeNotifierProvider(create: (_) => MediaProvider()),
       ],

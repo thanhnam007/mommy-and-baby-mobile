@@ -464,4 +464,56 @@ class ApiClient {
     updateBaseUrl();
     return _dio.delete('/pumping/$id');
   }
+
+  // ----------------- Milk Warming (Lịch hâm sữa) -----------------
+  Future<Response> getMilkWarmingStatus({int? babyId}) async {
+    updateBaseUrl();
+    String url = '/milk-warming/status';
+    if (babyId != null) url += '?baby_id=$babyId';
+    return _dio.get(url);
+  }
+
+  Future<Response> getMilkWarmingOverview({
+    int? babyId,
+    String? startDate,
+    String? endDate,
+    int tzOffset = 420,
+  }) async {
+    updateBaseUrl();
+    String url = '/milk-warming?tz_offset=$tzOffset';
+    if (babyId != null) url += '&baby_id=$babyId';
+    if (startDate != null && startDate.isNotEmpty) url += '&start_date=$startDate';
+    if (endDate != null && endDate.isNotEmpty) url += '&end_date=$endDate';
+    return _dio.get(url);
+  }
+
+  Future<Response> quickStartMilkWarming(Map<String, dynamic> data) async {
+    updateBaseUrl();
+    return _dio.post('/milk-warming/quick-start', data: data);
+  }
+
+  Future<Response> endMilkWarming(int id, Map<String, dynamic> data) async {
+    updateBaseUrl();
+    return _dio.post('/milk-warming/$id/end', data: data);
+  }
+
+  Future<Response> cancelMilkWarming(int id) async {
+    updateBaseUrl();
+    return _dio.post('/milk-warming/$id/cancel');
+  }
+
+  Future<Response> createManualMilkWarming(Map<String, dynamic> data) async {
+    updateBaseUrl();
+    return _dio.post('/milk-warming/manual', data: data);
+  }
+
+  Future<Response> updateMilkWarming(int id, Map<String, dynamic> data) async {
+    updateBaseUrl();
+    return _dio.put('/milk-warming/$id', data: data);
+  }
+
+  Future<Response> deleteMilkWarming(int id) async {
+    updateBaseUrl();
+    return _dio.delete('/milk-warming/$id');
+  }
 }
