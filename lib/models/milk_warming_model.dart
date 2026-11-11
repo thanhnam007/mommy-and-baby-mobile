@@ -103,12 +103,62 @@ class MilkWarmingStatusModel {
   }
 }
 
+class MilkWarmingCorrelationModel {
+  final String date;
+  final String displayDate;
+  final int warmedTotalMl;
+  final int warmedSessionsCount;
+  final int consumedWarmedMl;
+  final int consumedWarmedCount;
+  final int consumedDirectMl;
+  final int consumedDirectCount;
+  final int differenceMl;
+  final double? consumptionRatioPercent;
+  final String status;
+  final String message;
+
+  MilkWarmingCorrelationModel({
+    required this.date,
+    required this.displayDate,
+    required this.warmedTotalMl,
+    required this.warmedSessionsCount,
+    required this.consumedWarmedMl,
+    required this.consumedWarmedCount,
+    required this.consumedDirectMl,
+    required this.consumedDirectCount,
+    required this.differenceMl,
+    this.consumptionRatioPercent,
+    required this.status,
+    required this.message,
+  });
+
+  factory MilkWarmingCorrelationModel.fromJson(Map<String, dynamic> json) {
+    return MilkWarmingCorrelationModel(
+      date: json['date']?.toString() ?? '',
+      displayDate: json['display_date']?.toString() ?? '',
+      warmedTotalMl: (json['warmed_total_ml'] as num?)?.toInt() ?? 0,
+      warmedSessionsCount: (json['warmed_sessions_count'] as num?)?.toInt() ?? 0,
+      consumedWarmedMl: (json['consumed_warmed_ml'] as num?)?.toInt() ?? 0,
+      consumedWarmedCount: (json['consumed_warmed_count'] as num?)?.toInt() ?? 0,
+      consumedDirectMl: (json['consumed_direct_ml'] as num?)?.toInt() ?? 0,
+      consumedDirectCount: (json['consumed_direct_count'] as num?)?.toInt() ?? 0,
+      differenceMl: (json['difference_ml'] as num?)?.toInt() ?? 0,
+      consumptionRatioPercent: json['consumption_ratio_percent'] != null
+          ? (json['consumption_ratio_percent'] as num).toDouble()
+          : null,
+      status: json['status']?.toString() ?? 'no_data',
+      message: json['message']?.toString() ?? '',
+    );
+  }
+}
+
 class MilkWarmingDayGroupModel {
   final String dateStr;
   final String displayDate;
   final int totalAmountMl;
   final int sessionsCount;
   final List<MilkWarmingRecordModel> records;
+  final MilkWarmingCorrelationModel? correlation;
 
   MilkWarmingDayGroupModel({
     required this.dateStr,
@@ -116,6 +166,7 @@ class MilkWarmingDayGroupModel {
     required this.totalAmountMl,
     required this.sessionsCount,
     required this.records,
+    this.correlation,
   });
 
   factory MilkWarmingDayGroupModel.fromJson(Map<String, dynamic> json) {
@@ -126,6 +177,9 @@ class MilkWarmingDayGroupModel {
       totalAmountMl: (json['total_amount_ml'] as num?)?.toInt() ?? 0,
       sessionsCount: (json['sessions_count'] as num?)?.toInt() ?? 0,
       records: rawList.map((x) => MilkWarmingRecordModel.fromJson(x)).toList(),
+      correlation: json['correlation'] != null
+          ? MilkWarmingCorrelationModel.fromJson(json['correlation'])
+          : null,
     );
   }
 }
@@ -134,12 +188,14 @@ class MilkWarmingOverviewModel {
   final MilkWarmingStatusModel status;
   final int todayTotalMl;
   final int todaySessionsCount;
+  final MilkWarmingCorrelationModel? todayCorrelation;
   final List<MilkWarmingDayGroupModel> groups;
 
   MilkWarmingOverviewModel({
     required this.status,
     required this.todayTotalMl,
     required this.todaySessionsCount,
+    this.todayCorrelation,
     required this.groups,
   });
 
@@ -149,6 +205,9 @@ class MilkWarmingOverviewModel {
       status: MilkWarmingStatusModel.fromJson(json['status'] ?? {}),
       todayTotalMl: (json['today_total_ml'] as num?)?.toInt() ?? 0,
       todaySessionsCount: (json['today_sessions_count'] as num?)?.toInt() ?? 0,
+      todayCorrelation: json['today_correlation'] != null
+          ? MilkWarmingCorrelationModel.fromJson(json['today_correlation'])
+          : null,
       groups: rawGroups.map((x) => MilkWarmingDayGroupModel.fromJson(x)).toList(),
     );
   }

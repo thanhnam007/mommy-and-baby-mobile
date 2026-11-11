@@ -604,7 +604,11 @@ class ActivityTimelineRow extends StatelessWidget {
                   : '🔄 Cả 2 bên';
           tags.add(sideLabel);
         } else if (act.feedingType == 'bottle_breast') {
-          tags.add('🧴 Sữa mẹ vắt ra');
+          if (act.isWarmed) {
+            tags.add('♨️ Sữa mẹ (đã hâm)');
+          } else {
+            tags.add('🧴 Sữa mẹ (ti trực tiếp)');
+          }
         } else {
           tags.add('🥛 Sữa công thức');
         }

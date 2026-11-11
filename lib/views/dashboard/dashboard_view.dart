@@ -125,6 +125,10 @@ class _DashboardViewState extends State<DashboardView> {
             formulaMl: feeding.formulaMl,
             bottleBreastCount: feeding.bottleBreastCount,
             bottleBreastMl: feeding.bottleBreastMl,
+            bottleBreastWarmedCount: feeding.bottleBreastWarmedCount,
+            bottleBreastWarmedMl: feeding.bottleBreastWarmedMl,
+            bottleBreastDirectCount: feeding.bottleBreastDirectCount,
+            bottleBreastDirectMl: feeding.bottleBreastDirectMl,
           )
         : ((fallbackLastFeedingEnd != null || fallbackLastFeedingTime != null)
             ? FeedingSummaryModel(
@@ -939,9 +943,16 @@ class _DashboardViewState extends State<DashboardView> {
                                   ),
                                   const SizedBox(height: 2),
                                   Text(
-                                    '🧴 Mẹ: ${feeding?.bottleBreastCount ?? 0} cữ (${feeding?.bottleBreastMl ?? 0}ml)',
-                                    style: TextStyle(fontSize: 10.5, color: isDark ? AppTheme.gray300 : AppTheme.gray700),
+                                    '♨️ Sữa hâm: ${feeding?.bottleBreastWarmedCount ?? 0} cữ (${feeding?.bottleBreastWarmedMl ?? 0}ml)',
+                                    style: TextStyle(fontSize: 10.5, color: Colors.amber.shade700, fontWeight: FontWeight.w600),
                                   ),
+                                  if ((feeding?.bottleBreastDirectCount ?? 0) > 0) ...[
+                                    const SizedBox(height: 2),
+                                    Text(
+                                      '🍼 Sữa tươi: ${feeding?.bottleBreastDirectCount ?? 0} cữ (${feeding?.bottleBreastDirectMl ?? 0}ml)',
+                                      style: TextStyle(fontSize: 10.5, color: isDark ? AppTheme.gray300 : AppTheme.gray700),
+                                    ),
+                                  ],
                                 ],
                               ),
                             ),

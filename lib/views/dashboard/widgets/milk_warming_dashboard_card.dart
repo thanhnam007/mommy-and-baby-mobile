@@ -421,6 +421,58 @@ class MilkWarmingDashboardCard extends StatelessWidget {
               ],
             ),
           ],
+
+          // Correlation Today Strip
+          if (provider.overview?.todayCorrelation != null) ...[
+            Builder(
+              builder: (context) {
+                final corr = provider.overview!.todayCorrelation!;
+                if (corr.warmedTotalMl == 0 && corr.consumedWarmedMl == 0) {
+                  return const SizedBox.shrink();
+                }
+                return Column(
+                  children: [
+                    const SizedBox(height: 10),
+                    Divider(height: 1, color: isDark ? AppTheme.gray800 : AppTheme.gray200),
+                    const SizedBox(height: 8),
+                    InkWell(
+                      onTap: () => _openFullView(context),
+                      borderRadius: BorderRadius.circular(8),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Row(
+                            children: [
+                              const Text('⚖️', style: TextStyle(fontSize: 12)),
+                              const SizedBox(width: 4),
+                              Text(
+                                'Hôm nay bé bú: ${corr.consumedWarmedMl}/${corr.warmedTotalMl}ml',
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w600,
+                                  color: isDark ? AppTheme.gray300 : AppTheme.gray700,
+                                ),
+                              ),
+                            ],
+                          ),
+                          Text(
+                            corr.consumptionRatioPercent != null
+                                ? '${corr.consumptionRatioPercent!.toStringAsFixed(1)}% tiêu thụ →'
+                                : 'Chi tiết →',
+                            style: TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.amber.shade700,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                );
+              },
+            ),
+          ],
         ],
       ),
     );

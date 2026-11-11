@@ -9,6 +9,7 @@ class ActivityModel {
   final int? amountMl;
   final String? breastSide; // left, right, both
   final int? nursingMinutes;
+  final bool isWarmed; // True: sữa mẹ để lạnh & hâm nóng; False: sữa tươi ti trực tiếp
   final String? sleepQuality; // good, normal, restless
   final String? diaperType; // pee, poop, both, dry
   final String? notes;
@@ -25,6 +26,7 @@ class ActivityModel {
     this.amountMl,
     this.breastSide,
     this.nursingMinutes,
+    this.isWarmed = false,
     this.sleepQuality,
     this.diaperType,
     this.notes,
@@ -85,6 +87,7 @@ class ActivityModel {
       amountMl: json['amount_ml'],
       breastSide: json['breast_side'],
       nursingMinutes: json['nursing_minutes'],
+      isWarmed: json['is_warmed'] == true || json['is_warmed'] == 1,
       sleepQuality: json['sleep_quality'],
       diaperType: json['diaper_type'],
       notes: json['notes'],
@@ -114,6 +117,10 @@ class FeedingSummaryModel {
   final int formulaMl;
   final int bottleBreastCount;
   final int bottleBreastMl;
+  final int bottleBreastWarmedCount;
+  final int bottleBreastWarmedMl;
+  final int bottleBreastDirectCount;
+  final int bottleBreastDirectMl;
 
   FeedingSummaryModel({
     required this.totalMl,
@@ -134,6 +141,10 @@ class FeedingSummaryModel {
     this.formulaMl = 0,
     this.bottleBreastCount = 0,
     this.bottleBreastMl = 0,
+    this.bottleBreastWarmedCount = 0,
+    this.bottleBreastWarmedMl = 0,
+    this.bottleBreastDirectCount = 0,
+    this.bottleBreastDirectMl = 0,
   });
 
   String formatElapsedHero([DateTime? now]) {
@@ -200,6 +211,10 @@ class FeedingSummaryModel {
       formulaMl: json['formula_ml'] ?? 0,
       bottleBreastCount: json['bottle_breast_count'] ?? 0,
       bottleBreastMl: json['bottle_breast_ml'] ?? 0,
+      bottleBreastWarmedCount: json['bottle_breast_warmed_count'] ?? 0,
+      bottleBreastWarmedMl: json['bottle_breast_warmed_ml'] ?? 0,
+      bottleBreastDirectCount: json['bottle_breast_direct_count'] ?? 0,
+      bottleBreastDirectMl: json['bottle_breast_direct_ml'] ?? 0,
     );
   }
 }

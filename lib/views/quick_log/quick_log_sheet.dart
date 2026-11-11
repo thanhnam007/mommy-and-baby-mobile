@@ -22,6 +22,8 @@ class _QuickLogSheetState extends State<QuickLogSheet> {
 
   // Bottle
   final _amountMlController = TextEditingController(text: '120');
+  String _bottleFeedingType = 'formula'; // 'formula' or 'bottle_breast'
+  bool _isWarmed = true;
 
   // Solid (Ăn dặm)
   final _solidAmountController = TextEditingController(text: '80');
@@ -232,7 +234,14 @@ class _QuickLogSheetState extends State<QuickLogSheet> {
       bool ok = false;
       if (_selectedAction == 'bottle') {
         final ml = int.tryParse(_amountMlController.text) ?? 100;
-        ok = await activity.logBottleFeeding(baby.id, ml, time: startDateTime, notes: notes);
+        ok = await activity.logBottleFeeding(
+          baby.id,
+          ml,
+          feedingType: _bottleFeedingType,
+          isWarmed: _bottleFeedingType == 'bottle_breast' ? _isWarmed : false,
+          time: startDateTime,
+          notes: notes,
+        );
       } else if (_selectedAction == 'solid') {
         final grams = int.tryParse(_solidAmountController.text) ?? 80;
         ok = await activity.logSolid(baby.id, grams, time: startDateTime, notes: notes);
@@ -735,6 +744,95 @@ class _QuickLogSheetState extends State<QuickLogSheet> {
 
               // Form for Selected Action
               if (_selectedAction == 'bottle') ...[
+                const Text('Loại sữa bình:', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    Expanded(
+                      child: ChoiceChip(
+                        avatar: const Text('🥛', style: TextStyle(fontSize: 14)),
+                        label: const Text('Sữa công thức', style: TextStyle(fontSize: 12)),
+                        selected: _bottleFeedingType == 'formula',
+                        selectedColor: const Color(0xFF0284C7),
+                        labelStyle: TextStyle(
+                          color: _bottleFeedingType == 'formula' ? Colors.white : (isDark ? AppTheme.gray300 : AppTheme.gray700),
+                          fontWeight: _bottleFeedingType == 'formula' ? FontWeight.bold : FontWeight.normal,
+                        ),
+                        onSelected: (_) => setState(() => _bottleFeedingType = 'formula'),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: ChoiceChip(
+                        avatar: const Text('🧴', style: TextStyle(fontSize: 14)),
+                        label: const Text('Sữa mẹ (bình)', style: TextStyle(fontSize: 12)),
+                        selected: _bottleFeedingType == 'bottle_breast',
+                        selectedColor: AppTheme.amber500,
+                        labelStyle: TextStyle(
+                          color: _bottleFeedingType == 'bottle_breast' ? Colors.white : (isDark ? AppTheme.gray300 : AppTheme.gray700),
+                          fontWeight: _bottleFeedingType == 'bottle_breast' ? FontWeight.bold : FontWeight.normal,
+                        ),
+                        onSelected: (_) => setState(() => _bottleFeedingType = 'bottle_breast'),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+
+                // Option: Sữa mẹ vắt ra đã hâm nóng (để lạnh / đông đem hâm)
+                if (_bottleFeedingType == 'bottle_breast') ...[
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    decoration: BoxDecoration(
+                      color: isDark ? const Color(0xFF451A03).withValues(alpha: 0.3) : AppTheme.amber50,
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(
+                        color: isDark ? Colors.amber.shade900.withValues(alpha: 0.5) : Colors.amber.shade200,
+                      ),
+                    ),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Checkbox(
+                          value: _isWarmed,
+                          activeColor: Colors.amber.shade700,
+                          onChanged: (val) => setState(() => _isWarmed = val ?? false),
+                          visualDensity: VisualDensity.compact,
+                        ),
+                        const SizedBox(width: 4),
+                        Expanded(
+                          child: InkWell(
+                            onTap: () => setState(() => _isWarmed = !_isWarmed),
+                            child: Padding(
+                              padding: const EdgeInsets.only(top: 8.0, bottom: 4.0),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  const Text(
+                                    '♨️ Sữa mẹ đã hâm (để lạnh / đông đem hâm)',
+                                    style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                                  ),
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    _isWarmed
+                                        ? 'Cữ này dùng sữa mẹ trữ lạnh/đông đem hâm nóng (tính vào tương quan sữa hâm).'
+                                        : 'Sữa mẹ mới vắt cho bé ti bình trực tiếp ở nhiệt độ phòng (không qua máy hâm).',
+                                    style: TextStyle(
+                                      fontSize: 11,
+                                      color: isDark ? AppTheme.gray400 : AppTheme.gray600,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                ],
+
                 const Text('Lượng sữa bú (ml):', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
                 const SizedBox(height: 8),
                 TextField(

@@ -44,6 +44,7 @@ class _ActivityDetailSheetState extends State<ActivityDetailSheet> {
   late TextEditingController _amountCtrl;
   late TextEditingController _nursingMinutesCtrl;
   String? _breastSide;
+  bool _editIsWarmed = false;
   String? _sleepQuality;
   String? _diaperType;
 
@@ -185,6 +186,7 @@ class _ActivityDetailSheetState extends State<ActivityDetailSheet> {
     _endTime = end;
     _notesCtrl = TextEditingController(text: widget.activity.notes ?? '');
     _amountCtrl = TextEditingController(text: widget.activity.amountMl?.toString() ?? '');
+    _editIsWarmed = widget.activity.isWarmed;
 
     int? initialNursingMins = widget.activity.nursingMinutes;
     if (widget.activity.activityType == 'feeding' && widget.activity.feedingType == 'breast') {
@@ -368,7 +370,12 @@ class _ActivityDetailSheetState extends State<ActivityDetailSheet> {
       if (act.feedingType == 'breast') {
         return act.nursingMinutes != null ? 'Thời gian bú: ${act.nursingMinutes} phút' : null;
       }
-      return act.feedingType == 'bottle_breast' ? 'Bú bình • Sữa mẹ vắt ra' : 'Bú bình • Sữa công thức';
+      if (act.feedingType == 'bottle_breast') {
+        return act.isWarmed
+            ? 'Bú bình • Sữa mẹ đã hâm ♨️'
+            : 'Bú bình • Sữa mẹ tươi (ti trực tiếp không hâm) 🍼';
+      }
+      return 'Bú bình • Sữa công thức';
     }
     if (act.activityType == 'sleeping') {
       final q = act.sleepQuality == 'good' ? 'Bé ngủ rất ngoan, sâu giấc' : act.sleepQuality == 'restless' ? 'Bé trằn trọc, dễ giật mình' : 'Giấc ngủ bình thường';
@@ -513,6 +520,9 @@ class _ActivityDetailSheetState extends State<ActivityDetailSheet> {
     if (widget.activity.activityType == 'feeding') {
       if (widget.activity.feedingType != 'breast') {
         data['amount_ml'] = int.tryParse(_amountCtrl.text);
+        if (widget.activity.feedingType == 'bottle_breast') {
+          data['is_warmed'] = _editIsWarmed;
+        }
       } else {
         data['breast_side'] = _breastSide;
         int? mins = int.tryParse(_nursingMinutesCtrl.text.trim());
@@ -1432,7 +1442,62 @@ class _ActivityDetailSheetState extends State<ActivityDetailSheet> {
             keyboardType: TextInputType.number,
             decoration: const InputDecoration(labelText: 'Số ml sữa bú', suffixText: 'ml', prefixIcon: Icon(Icons.water_drop_outlined)),
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 10),
+
+          // Checkbox Sữa hâm nóng đối với cữ bú bình sữa mẹ
+          if (act.feedingType == 'bottle_breast') ...[
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              decoration: BoxDecoration(
+                color: isDark ? const Color(0xFF451A03).withValues(alpha: 0.3) : AppTheme.amber50,
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(
+                  color: isDark ? Colors.amber.shade900.withValues(alpha: 0.5) : Colors.amber.shade200,
+                ),
+              ),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Checkbox(
+                    value: _editIsWarmed,
+                    activeColor: Colors.amber.shade700,
+                    onChanged: (val) => setState(() => _editIsWarmed = val ?? false),
+                    visualDensity: VisualDensity.compact,
+                  ),
+                  const SizedBox(width: 4),
+                  Expanded(
+                    child: InkWell(
+                      onTap: () => setState(() => _editIsWarmed = !_editIsWarmed),
+                      child: Padding(
+                        padding: const EdgeInsets.only(top: 8.0, bottom: 4.0),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text(
+                              '♨️ Sữa mẹ đã hâm (để lạnh / đông đem hâm)',
+                              style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              _editIsWarmed
+                                  ? 'Cữ này dùng sữa mẹ trữ lạnh/đông đem hâm nóng (tính vào tương quan sữa hâm).'
+                                  : 'Sữa mẹ mới vắt ti bình trực tiếp ở nhiệt độ phòng (không qua máy hâm).',
+                              style: TextStyle(
+                                fontSize: 11,
+                                color: isDark ? AppTheme.gray400 : AppTheme.gray600,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 10),
+          ],
+          const SizedBox(height: 2),
         ],
 
         if (act.activityType == 'solid') ...[

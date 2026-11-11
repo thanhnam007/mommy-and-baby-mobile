@@ -163,7 +163,13 @@ class _MilkWarmingViewState extends State<MilkWarmingView> {
                 ),
               ],
             ),
-            const SizedBox(height: 20),
+            const SizedBox(height: 14),
+
+            // Correlation Card
+            if (overview?.todayCorrelation != null)
+              _buildTodayCorrelationCard(overview!.todayCorrelation!, isDark),
+
+            const SizedBox(height: 16),
 
             // History List
             const Text(
@@ -208,6 +214,165 @@ class _MilkWarmingViewState extends State<MilkWarmingView> {
     );
   }
 
+  Widget _buildTodayCorrelationCard(MilkWarmingCorrelationModel corr, bool isDark) {
+    Color statusColor = AppTheme.emerald500;
+    String statusText = 'Tối ưu';
+    if (corr.status == 'waste') {
+      statusColor = Colors.amber.shade700;
+      statusText = 'Dư thừa';
+    } else if (corr.status == 'deficit') {
+      statusColor = Colors.red.shade600;
+      statusText = 'Lệch số liệu';
+    } else if (corr.status == 'balanced') {
+      statusColor = Colors.lightBlue.shade700;
+      statusText = 'Khá tốt';
+    } else if (corr.status == 'no_data') {
+      statusColor = AppTheme.gray500;
+      statusText = 'Chưa có cữ hâm';
+    }
+
+    final double ratio = corr.consumptionRatioPercent ?? 0;
+    final double barRatio = (ratio / 100.0).clamp(0.0, 1.0);
+
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: isDark ? AppTheme.gray900 : Colors.white,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: isDark ? AppTheme.gray800 : AppTheme.gray200),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Row(
+                children: [
+                  const Text('⚖️', style: TextStyle(fontSize: 16)),
+                  const SizedBox(width: 6),
+                  const Text(
+                    'Tương quan Hâm & Bú hôm nay',
+                    style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
+                  ),
+                ],
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                decoration: BoxDecoration(
+                  color: statusColor.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: statusColor.withValues(alpha: 0.3)),
+                ),
+                child: Text(
+                  statusText,
+                  style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.bold, color: statusColor),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+
+          Row(
+            children: [
+              Expanded(
+                child: Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: isDark ? const Color(0xFF451A03).withValues(alpha: 0.2) : AppTheme.amber50,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('♨️ Đã hâm', style: TextStyle(fontSize: 10.5, color: Colors.amber.shade800, fontWeight: FontWeight.w600)),
+                      const SizedBox(height: 2),
+                      Text('${corr.warmedTotalMl} ml', style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Colors.amber.shade900)),
+                      Text('${corr.warmedSessionsCount} cữ', style: TextStyle(fontSize: 10, color: Colors.amber.shade800)),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: isDark ? AppTheme.brand700.withValues(alpha: 0.15) : AppTheme.brand50,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('🍼 Bé đã bú (hâm)', style: TextStyle(fontSize: 10.5, color: AppTheme.brand600, fontWeight: FontWeight.w600)),
+                      const SizedBox(height: 2),
+                      Text('${corr.consumedWarmedMl} ml', style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: AppTheme.brand500)),
+                      Text('${corr.consumedWarmedCount} cữ', style: TextStyle(fontSize: 10, color: AppTheme.brand600)),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+
+          if (corr.warmedTotalMl > 0) ...[
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  'Tỉ lệ bú / hâm: ${ratio.toStringAsFixed(1)}%',
+                  style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: statusColor),
+                ),
+                Text(
+                  corr.differenceMl >= 0 ? 'Dư/hao hụt: ${corr.differenceMl} ml' : 'Bú vượt: ${corr.differenceMl.abs()} ml',
+                  style: TextStyle(fontSize: 11, color: isDark ? AppTheme.gray400 : AppTheme.gray600),
+                ),
+              ],
+            ),
+            const SizedBox(height: 6),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(6),
+              child: LinearProgressIndicator(
+                value: barRatio,
+                minHeight: 6,
+                backgroundColor: isDark ? AppTheme.gray800 : AppTheme.gray200,
+                valueColor: AlwaysStoppedAnimation<Color>(statusColor),
+              ),
+            ),
+            const SizedBox(height: 8),
+          ],
+
+          if (corr.consumedDirectCount > 0) ...[
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+              decoration: BoxDecoration(
+                color: isDark ? AppTheme.gray800 : AppTheme.gray50,
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text('🧴 Sữa mẹ tươi ti trực tiếp:', style: TextStyle(fontSize: 10.5, color: isDark ? AppTheme.gray400 : AppTheme.gray600)),
+                  Text(
+                    '${corr.consumedDirectMl} ml (${corr.consumedDirectCount} cữ)',
+                    style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 6),
+          ],
+
+          Text(
+            '💡 ${corr.message}',
+            style: TextStyle(fontSize: 11, color: isDark ? AppTheme.gray400 : AppTheme.gray600, fontStyle: FontStyle.italic),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildDayGroup(MilkWarmingDayGroupModel group, bool isDark) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 14),
@@ -220,9 +385,28 @@ class _MilkWarmingViewState extends State<MilkWarmingView> {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(group.displayDate, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
-                Text(
-                  '${group.totalAmountMl} ml • ${group.sessionsCount} cữ',
-                  style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: Colors.amber.shade700),
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    if (group.correlation != null && (group.correlation!.consumedWarmedMl > 0 || group.correlation!.warmedTotalMl > 0)) ...[
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: AppTheme.brand500.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Text(
+                          '🍼 Bú ${group.correlation!.consumedWarmedMl}/${group.correlation!.warmedTotalMl}ml',
+                          style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: AppTheme.brand500),
+                        ),
+                      ),
+                      const SizedBox(width: 6),
+                    ],
+                    Text(
+                      '${group.totalAmountMl} ml • ${group.sessionsCount} cữ',
+                      style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: Colors.amber.shade700),
+                    ),
+                  ],
                 ),
               ],
             ),

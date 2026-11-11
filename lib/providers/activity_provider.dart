@@ -232,13 +232,21 @@ class ActivityProvider extends ChangeNotifier {
   }
 
   // --- Feeding actions ---
-  Future<bool> logBottleFeeding(int babyId, int amountMl, {String feedingType = 'formula', DateTime? time, String? notes}) async {
+  Future<bool> logBottleFeeding(
+    int babyId,
+    int amountMl, {
+    String feedingType = 'formula',
+    bool isWarmed = false,
+    DateTime? time,
+    String? notes,
+  }) async {
     try {
       final t = time ?? DateTime.now();
       final res = await _api.logFeeding({
         'baby_id': babyId,
         'feeding_type': feedingType,
         'amount_ml': amountMl,
+        'is_warmed': feedingType == 'bottle_breast' ? isWarmed : false,
         'start_time': t.subtract(const Duration(minutes: 15)).toUtc().toIso8601String(),
         'end_time': t.toUtc().toIso8601String(),
         if (notes != null) 'notes': notes,
