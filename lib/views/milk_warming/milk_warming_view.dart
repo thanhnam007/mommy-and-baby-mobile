@@ -103,7 +103,7 @@ class _MilkWarmingViewState extends State<MilkWarmingView> {
       floatingActionButton: FloatingActionButton.extended(
         onPressed: _openQuickSheet,
         backgroundColor: Colors.amber.shade700,
-        icon: const Text('⚡', style: TextStyle(fontSize: 16)),
+        icon: const Icon(Icons.bolt_rounded, size: 20, color: Colors.white),
         label: const Text('Ghi nhanh lịch hâm', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white)),
       ),
       body: RefreshIndicator(

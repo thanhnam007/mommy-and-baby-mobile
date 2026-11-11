@@ -63,6 +63,9 @@ class MilkWarmingStatusModel {
   final String statusLabel;
   final String displayMessage;
   final int? safeRemainingSeconds;
+  final bool isAllConsumed;
+  final int todayWarmedMl;
+  final int todayConsumedWarmedMl;
 
   MilkWarmingStatusModel({
     this.activeWarming,
@@ -74,6 +77,9 @@ class MilkWarmingStatusModel {
     required this.statusLabel,
     required this.displayMessage,
     this.safeRemainingSeconds,
+    this.isAllConsumed = false,
+    this.todayWarmedMl = 0,
+    this.todayConsumedWarmedMl = 0,
   });
 
   factory MilkWarmingStatusModel.fromJson(Map<String, dynamic> json) {
@@ -99,6 +105,9 @@ class MilkWarmingStatusModel {
       safeRemainingSeconds: json['safe_remaining_seconds'] is int
           ? json['safe_remaining_seconds']
           : int.tryParse(json['safe_remaining_seconds']?.toString() ?? ''),
+      isAllConsumed: json['is_all_consumed'] == true,
+      todayWarmedMl: (json['today_warmed_ml'] as num?)?.toInt() ?? 0,
+      todayConsumedWarmedMl: (json['today_consumed_warmed_ml'] as num?)?.toInt() ?? 0,
     );
   }
 }

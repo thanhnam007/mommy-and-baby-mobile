@@ -48,9 +48,20 @@ class MilkWarmingProvider extends ChangeNotifier {
     return diff < 0 ? 0 : diff;
   }
 
+  bool get isAllWarmedMilkConsumed {
+    if (isWarming) return false;
+    if (_status?.isAllConsumed == true) return true;
+    final corr = _overview?.todayCorrelation;
+    if (corr != null && corr.warmedTotalMl > 0 && corr.consumedWarmedMl >= corr.warmedTotalMl) {
+      return true;
+    }
+    return false;
+  }
+
   // 2 hours = 7200 seconds rule
   bool get liveIsOver2Hours {
     if (isWarming) return false;
+    if (isAllWarmedMilkConsumed) return false;
     final sec = liveSecondsSinceLastWarming;
     if (sec == null) return false;
     return sec > 7200;

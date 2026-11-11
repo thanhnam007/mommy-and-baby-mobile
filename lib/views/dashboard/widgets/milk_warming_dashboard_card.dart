@@ -44,8 +44,12 @@ class MilkWarmingDashboardCard extends StatelessWidget {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     final isWarming = provider.isWarming;
+    final isAllConsumed = provider.isAllWarmedMilkConsumed;
     final isOver2h = provider.liveIsOver2Hours;
     final lastCompleted = provider.status?.lastCompletedWarming;
+
+    final warmedMl = provider.overview?.todayCorrelation?.warmedTotalMl ?? provider.status?.todayWarmedMl ?? 0;
+    final consumedWarmedMl = provider.overview?.todayCorrelation?.consumedWarmedMl ?? provider.status?.todayConsumedWarmedMl ?? 0;
 
     Color borderColor;
     Color bgColor;
@@ -53,6 +57,9 @@ class MilkWarmingDashboardCard extends StatelessWidget {
     if (isWarming) {
       borderColor = Colors.amber.shade400;
       bgColor = isDark ? Colors.amber.shade900.withValues(alpha: 0.25) : const Color(0xFFFFFBEB);
+    } else if (isAllConsumed) {
+      borderColor = const Color(0xFF6EE7B7);
+      bgColor = isDark ? const Color(0xFF064E3B).withValues(alpha: 0.3) : const Color(0xFFECFDF5);
     } else if (isOver2h) {
       borderColor = Colors.red.shade300;
       bgColor = isDark ? Colors.red.shade900.withValues(alpha: 0.25) : const Color(0xFFFEF2F2);
@@ -83,52 +90,64 @@ class MilkWarmingDashboardCard extends StatelessWidget {
         children: [
           // Top Row: Title + Status Pill
           Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Row(
-                children: [
-                  Container(
-                    width: 36,
-                    height: 36,
-                    decoration: BoxDecoration(
-                      color: isWarming
-                          ? Colors.amber.shade100
-                          : isOver2h
-                              ? Colors.red.shade100
-                              : lastCompleted != null
-                                  ? const Color(0xFFD1FAE5)
-                                  : (isDark ? AppTheme.gray800 : AppTheme.gray100),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Center(
-                      child: Text(
-                        isWarming ? '♨️' : isOver2h ? '⚠️' : '🍼',
-                        style: const TextStyle(fontSize: 18),
+              Expanded(
+                child: Row(
+                  children: [
+                    Container(
+                      width: 36,
+                      height: 36,
+                      decoration: BoxDecoration(
+                        color: isWarming
+                            ? Colors.amber.shade100
+                            : isAllConsumed
+                                ? const Color(0xFFD1FAE5)
+                                : isOver2h
+                                    ? Colors.red.shade100
+                                    : lastCompleted != null
+                                        ? const Color(0xFFD1FAE5)
+                                        : (isDark ? AppTheme.gray800 : AppTheme.gray100),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Center(
+                        child: Text(
+                          isWarming ? '♨️' : isAllConsumed ? '🎉' : isOver2h ? '⚠️' : '🍼',
+                          style: const TextStyle(fontSize: 18),
+                        ),
                       ),
                     ),
-                  ),
-                  const SizedBox(width: 10),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text(
-                        'Lịch hâm sữa',
-                        style: TextStyle(fontSize: 13.5, fontWeight: FontWeight.bold),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'Lịch hâm sữa',
+                            style: TextStyle(fontSize: 13.5, fontWeight: FontWeight.bold),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          Text(
+                            isWarming
+                                ? 'Đang hâm bình ${provider.status?.activeWarming?.amountMl}ml'
+                                : isAllConsumed
+                                    ? 'Bé đã bú hết $consumedWarmedMl/${warmedMl}ml sữa hâm'
+                                    : isOver2h
+                                        ? 'Đã quá 2h an toàn'
+                                        : lastCompleted != null
+                                            ? 'Bình gần nhất: ${lastCompleted.amountMl}ml'
+                                            : 'Chưa hâm sữa hôm nay',
+                            style: TextStyle(fontSize: 11, color: isDark ? AppTheme.gray400 : AppTheme.gray600),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ],
                       ),
-                      Text(
-                        isWarming
-                            ? 'Đang hâm bình ${provider.status?.activeWarming?.amountMl}ml'
-                            : isOver2h
-                                ? 'Đã quá 2h an toàn'
-                                : lastCompleted != null
-                                    ? 'Bình gần nhất: ${lastCompleted.amountMl}ml'
-                                    : 'Chưa hâm sữa hôm nay',
-                        style: TextStyle(fontSize: 11, color: isDark ? AppTheme.gray400 : AppTheme.gray600),
-                      ),
-                    ],
-                  ),
-                ],
+                    ),
+                  ],
+                ),
               ),
+              const SizedBox(width: 8),
 
               // Pill
               Container(
@@ -136,21 +155,25 @@ class MilkWarmingDashboardCard extends StatelessWidget {
                 decoration: BoxDecoration(
                   color: isWarming
                       ? Colors.amber.shade600
-                      : isOver2h
-                          ? Colors.red.shade600
-                          : lastCompleted != null
-                              ? const Color(0xFF10B981)
-                              : Colors.grey.shade400,
+                      : isAllConsumed
+                          ? const Color(0xFF10B981)
+                          : isOver2h
+                              ? Colors.red.shade600
+                              : lastCompleted != null
+                                  ? const Color(0xFF10B981)
+                                  : Colors.grey.shade400,
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Text(
                   isWarming
                       ? 'Đang hâm'
-                      : isOver2h
-                          ? 'Cần hâm sữa mới'
-                          : lastCompleted != null
-                              ? 'Sữa còn dùng được'
-                              : 'Chưa hâm',
+                      : isAllConsumed
+                          ? 'Đã bú hết sữa'
+                          : isOver2h
+                              ? 'Cần hâm sữa mới'
+                              : lastCompleted != null
+                                  ? 'Sữa còn dùng được'
+                                  : 'Chưa hâm',
                   style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
                 ),
               ),
@@ -213,9 +236,15 @@ class MilkWarmingDashboardCard extends StatelessWidget {
                       label: const Text(
                         'Kết thúc hâm',
                         style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.white),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                       ),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.amber.shade700,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 0),
+                        minimumSize: Size.zero,
+                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                       ),
                     ),
@@ -229,9 +258,85 @@ class MilkWarmingDashboardCard extends StatelessWidget {
                         ? null
                         : () => provider.cancelWarming(provider.status!.activeWarming!.id, babyId),
                     style: OutlinedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 0),
+                      minimumSize: Size.zero,
+                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                     ),
                     child: const Text('Hủy', style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.bold)),
+                  ),
+                ),
+              ],
+            ),
+          ] else if (isAllConsumed) ...[
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: const Color(0xFF10B981).withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(color: const Color(0xFF6EE7B7)),
+              ),
+              child: Row(
+                children: [
+                  const Text('🎉', style: TextStyle(fontSize: 18)),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'Chúc mừng, bé đã bú hết lượng sữa hâm',
+                          style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.bold, color: Color(0xFF047857)),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          'Bé đã bú trọn vẹn $consumedWarmedMl/$warmedMl ml sữa hâm hôm nay. Không còn sữa dư.',
+                          style: const TextStyle(fontSize: 10.5, color: Color(0xFF065F46), fontWeight: FontWeight.w500),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 10),
+            Row(
+              children: [
+                Expanded(
+                  child: SizedBox(
+                    height: 40,
+                    child: ElevatedButton.icon(
+                      onPressed: () => _openQuickSheet(context),
+                      icon: const Icon(Icons.bolt_rounded, size: 18, color: Colors.white),
+                      label: const Text(
+                        'Ghi nhanh lịch hâm mới',
+                        style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.white),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF059669),
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 0),
+                        minimumSize: Size.zero,
+                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                SizedBox(
+                  height: 40,
+                  child: OutlinedButton(
+                    onPressed: () => _openFullView(context),
+                    style: OutlinedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 0),
+                      minimumSize: Size.zero,
+                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    ),
+                    child: const Text('Lịch sử', style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.bold)),
                   ),
                 ),
               ],
@@ -271,16 +376,22 @@ class MilkWarmingDashboardCard extends StatelessWidget {
               children: [
                 Expanded(
                   child: SizedBox(
-                    height: 38,
+                    height: 40,
                     child: ElevatedButton.icon(
                       onPressed: () => _openQuickSheet(context),
-                      icon: const Text('⚡', style: TextStyle(fontSize: 14)),
+                      icon: const Icon(Icons.bolt_rounded, size: 18, color: Colors.white),
                       label: const Text(
                         'Ghi nhanh lịch hâm',
                         style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.white),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                       ),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.red.shade600,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 0),
+                        minimumSize: Size.zero,
+                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                       ),
                     ),
@@ -288,10 +399,13 @@ class MilkWarmingDashboardCard extends StatelessWidget {
                 ),
                 const SizedBox(width: 8),
                 SizedBox(
-                  height: 38,
+                  height: 40,
                   child: OutlinedButton(
                     onPressed: () => _openFullView(context),
                     style: OutlinedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 0),
+                      minimumSize: Size.zero,
+                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                     ),
                     child: const Text('Lịch sử', style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.bold)),
@@ -354,16 +468,22 @@ class MilkWarmingDashboardCard extends StatelessWidget {
               children: [
                 Expanded(
                   child: SizedBox(
-                    height: 38,
+                    height: 40,
                     child: ElevatedButton.icon(
                       onPressed: () => _openQuickSheet(context),
-                      icon: const Text('⚡', style: TextStyle(fontSize: 14)),
+                      icon: const Icon(Icons.bolt_rounded, size: 18, color: Colors.white),
                       label: const Text(
                         'Ghi nhanh lịch hâm',
                         style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.white),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                       ),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.amber.shade700,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 0),
+                        minimumSize: Size.zero,
+                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                       ),
                     ),
@@ -371,10 +491,13 @@ class MilkWarmingDashboardCard extends StatelessWidget {
                 ),
                 const SizedBox(width: 8),
                 SizedBox(
-                  height: 38,
+                  height: 40,
                   child: OutlinedButton(
                     onPressed: () => _openFullView(context),
                     style: OutlinedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 0),
+                      minimumSize: Size.zero,
+                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                     ),
                     child: const Text('Lịch sử', style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.bold)),
@@ -392,16 +515,22 @@ class MilkWarmingDashboardCard extends StatelessWidget {
               children: [
                 Expanded(
                   child: SizedBox(
-                    height: 38,
+                    height: 40,
                     child: ElevatedButton.icon(
                       onPressed: () => _openQuickSheet(context),
-                      icon: const Text('⚡', style: TextStyle(fontSize: 14)),
+                      icon: const Icon(Icons.bolt_rounded, size: 18, color: Colors.white),
                       label: const Text(
                         'Ghi nhanh lịch hâm',
                         style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.white),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                       ),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.amber.shade700,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 0),
+                        minimumSize: Size.zero,
+                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                       ),
                     ),
@@ -409,10 +538,13 @@ class MilkWarmingDashboardCard extends StatelessWidget {
                 ),
                 const SizedBox(width: 8),
                 SizedBox(
-                  height: 38,
+                  height: 40,
                   child: OutlinedButton(
                     onPressed: () => _openFullView(context),
                     style: OutlinedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 0),
+                      minimumSize: Size.zero,
+                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                     ),
                     child: const Text('Lịch sử', style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.bold)),

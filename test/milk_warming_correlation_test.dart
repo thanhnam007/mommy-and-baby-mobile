@@ -130,6 +130,24 @@ void main() {
       expect(overview.groups.first.correlation?.consumedWarmedMl, 225);
     });
 
+    test('MilkWarmingStatusModel parses is_all_consumed and smart message correctly', () {
+      final status = MilkWarmingStatusModel.fromJson({
+        'is_over_2_hours': false,
+        'status_label': 'all_consumed',
+        'display_message': 'Chúc mừng, bé đã bú hết lượng sữa hâm',
+        'is_all_consumed': true,
+        'today_warmed_ml': 120,
+        'today_consumed_warmed_ml': 120,
+      });
+
+      expect(status.isAllConsumed, isTrue);
+      expect(status.isOver2Hours, isFalse);
+      expect(status.statusLabel, 'all_consumed');
+      expect(status.displayMessage, 'Chúc mừng, bé đã bú hết lượng sữa hâm');
+      expect(status.todayWarmedMl, 120);
+      expect(status.todayConsumedWarmedMl, 120);
+    });
+
     testWidgets('ActivityDetailSheet shows warmed badge and edit checkbox for bottle_breast', (WidgetTester tester) async {
       tester.view.physicalSize = const Size(800, 1200);
       tester.view.devicePixelRatio = 1.0;

@@ -246,6 +246,10 @@ class _MilkWarmingQuickSheetState extends State<MilkWarmingQuickSheet> {
               ),
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.amber.shade700,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 0),
+                minimumSize: Size.zero,
+                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                 elevation: 2,
               ),
