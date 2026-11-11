@@ -1,7 +1,9 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../../core/theme/app_theme.dart';
+import '../../models/activity_model.dart';
 import '../../providers/activity_provider.dart';
 import '../../providers/baby_provider.dart';
 import '../../providers/growth_provider.dart';
@@ -11,10 +13,31 @@ import '../pumping/pumping_view.dart';
 import '../reminders/reminders_view.dart';
 import '../timeline/widgets/activity_timeline_row.dart';
 
-class DashboardView extends StatelessWidget {
+class DashboardView extends StatefulWidget {
   final Function(int) onTabChange;
 
   const DashboardView({super.key, required this.onTabChange});
+
+  @override
+  State<DashboardView> createState() => _DashboardViewState();
+}
+
+class _DashboardViewState extends State<DashboardView> {
+  Timer? _tickerTimer;
+
+  @override
+  void initState() {
+    super.initState();
+    _tickerTimer = Timer.periodic(const Duration(seconds: 1), (_) {
+      if (mounted) setState(() {});
+    });
+  }
+
+  @override
+  void dispose() {
+    _tickerTimer?.cancel();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -58,6 +81,80 @@ class DashboardView extends StatelessWidget {
     final isFeedingLoading = activityProvider.isFeedingActionLoading;
     final isSleepLoading = activityProvider.isSleepActionLoading;
 
+    // Fallback từ timeline nếu backend summary chưa có lastFeedingTime hoặc lastSleepEnd
+    String? fallbackLastFeedingTime = feeding?.lastFeedingTime;
+    if (fallbackLastFeedingTime == null && activityProvider.allTimeline.isNotEmpty) {
+      for (final a in activityProvider.allTimeline) {
+        if (a.activityType == 'feeding') {
+          fallbackLastFeedingTime = a.startTime;
+          break;
+        }
+      }
+    }
+    String? fallbackLastSleepEnd = sleep?.lastSleepEnd;
+    if (fallbackLastSleepEnd == null && activityProvider.allTimeline.isNotEmpty) {
+      for (final a in activityProvider.allTimeline) {
+        if (a.activityType == 'sleeping' && a.endTime != null) {
+          fallbackLastSleepEnd = a.endTime;
+          break;
+        }
+      }
+    }
+
+    final effectiveFeeding = feeding != null
+        ? FeedingSummaryModel(
+            totalMl: feeding.totalMl,
+            totalNursingMinutes: feeding.totalNursingMinutes,
+            feedingCount: feeding.feedingCount,
+            lastFeedingTime: fallbackLastFeedingTime,
+            lastFeedingEnd: feeding.lastFeedingEnd,
+            minutesSinceLastFeeding: feeding.minutesSinceLastFeeding,
+            currentFeedingDurationMinutes: feeding.currentFeedingDurationMinutes,
+            isCurrentlyFeeding: feeding.isCurrentlyFeeding,
+            currentFeedingId: feeding.currentFeedingId,
+            currentFeedingStart: feeding.currentFeedingStart,
+            breastCount: feeding.breastCount,
+            breastNursingMinutes: feeding.breastNursingMinutes,
+            bottleCount: feeding.bottleCount,
+            bottleTotalMl: feeding.bottleTotalMl,
+            formulaCount: feeding.formulaCount,
+            formulaMl: feeding.formulaMl,
+            bottleBreastCount: feeding.bottleBreastCount,
+            bottleBreastMl: feeding.bottleBreastMl,
+          )
+        : (fallbackLastFeedingTime != null
+            ? FeedingSummaryModel(
+                totalMl: 0,
+                totalNursingMinutes: 0,
+                feedingCount: 0,
+                lastFeedingTime: fallbackLastFeedingTime,
+                isCurrentlyFeeding: false,
+              )
+            : null);
+
+    final effectiveSleep = sleep != null
+        ? SleepSummaryModel(
+            totalSleepMinutes: sleep.totalSleepMinutes,
+            totalSleepFormatted: sleep.totalSleepFormatted,
+            sleepCount: sleep.sleepCount,
+            isCurrentlySleeping: sleep.isCurrentlySleeping,
+            currentSleepId: sleep.currentSleepId,
+            currentSleepStart: sleep.currentSleepStart,
+            currentSleepDurationMinutes: sleep.currentSleepDurationMinutes,
+            lastSleepStart: sleep.lastSleepStart,
+            lastSleepEnd: fallbackLastSleepEnd,
+            minutesSinceLastSleep: sleep.minutesSinceLastSleep,
+          )
+        : (fallbackLastSleepEnd != null
+            ? SleepSummaryModel(
+                totalSleepMinutes: 0,
+                totalSleepFormatted: '0g 0p',
+                sleepCount: 0,
+                isCurrentlySleeping: false,
+                lastSleepEnd: fallbackLastSleepEnd,
+              )
+            : null);
+
     final breastCount = feeding?.breastCount ?? 0;
     final bottleCount = feeding?.bottleCount ?? 0;
     final totalFeedings = breastCount + bottleCount;
@@ -92,95 +189,172 @@ class DashboardView extends StatelessWidget {
                   ),
                 ],
               ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(baby.genderEmoji, style: const TextStyle(fontSize: 22)),
-                            const SizedBox(width: 8),
-                            Flexible(
-                              child: Text(
-                                baby.name,
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.bold,
+                            Row(
+                              children: [
+                                Text(baby.genderEmoji, style: const TextStyle(fontSize: 22)),
+                                const SizedBox(width: 8),
+                                Flexible(
+                                  child: Text(
+                                    baby.name,
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
                                 ),
-                                overflow: TextOverflow.ellipsis,
+                                if (baby.nickname != null && baby.nickname!.isNotEmpty) ...[
+                                  const SizedBox(width: 6),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                                    decoration: BoxDecoration(
+                                      color: Colors.white.withValues(alpha: 0.25),
+                                      borderRadius: BorderRadius.circular(10),
+                                    ),
+                                    child: Text(
+                                      '(${baby.nickname})',
+                                      style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w600),
+                                    ),
+                                  ),
+                                ],
+                              ],
+                            ),
+                            const SizedBox(height: 6),
+                            Text(
+                              '🎂 ${baby.ageText.isNotEmpty ? baby.ageText : "Đang cập nhật"}',
+                              style: TextStyle(
+                                color: Colors.white.withValues(alpha: 0.95),
+                                fontSize: 12.5,
+                                fontWeight: FontWeight.w500,
                               ),
                             ),
-                            if (baby.nickname != null && baby.nickname!.isNotEmpty) ...[
-                              const SizedBox(width: 6),
-                              Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
-                                decoration: BoxDecoration(
-                                  color: Colors.white.withValues(alpha: 0.25),
-                                  borderRadius: BorderRadius.circular(10),
-                                ),
-                                child: Text(
-                                  '(${baby.nickname})',
-                                  style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w600),
-                                ),
+                            const SizedBox(height: 4),
+                            Text(
+                              'Hôm nay: ${feeding?.feedingCount ?? 0} cữ bú • ${sleep?.sleepCount ?? 0} giấc ngủ',
+                              style: TextStyle(
+                                color: Colors.white.withValues(alpha: 0.8),
+                                fontSize: 11,
                               ),
-                            ],
+                            ),
                           ],
                         ),
-                        const SizedBox(height: 6),
-                        Text(
-                          '🎂 ${baby.ageText.isNotEmpty ? baby.ageText : "Đang cập nhật"}',
-                          style: TextStyle(
-                            color: Colors.white.withValues(alpha: 0.95),
-                            fontSize: 12.5,
-                            fontWeight: FontWeight.w500,
-                          ),
+                      ),
+                      const SizedBox(width: 10),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                        decoration: BoxDecoration(
+                          color: isCurrentlyFeeding
+                              ? AppTheme.brand700.withValues(alpha: 0.6)
+                              : (isSleeping
+                                  ? Colors.indigo.shade900.withValues(alpha: 0.6)
+                                  : const Color(0xFF064E3B).withValues(alpha: 0.6)),
+                          borderRadius: BorderRadius.circular(14),
+                          border: Border.all(color: Colors.white.withValues(alpha: 0.35)),
                         ),
-                        const SizedBox(height: 4),
-                        Text(
-                          'Hôm nay: ${feeding?.feedingCount ?? 0} cữ bú • ${sleep?.sleepCount ?? 0} giấc ngủ',
-                          style: TextStyle(
-                            color: Colors.white.withValues(alpha: 0.8),
-                            fontSize: 11,
-                          ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Container(
+                              width: 8,
+                              height: 8,
+                              decoration: BoxDecoration(
+                                color: isCurrentlyFeeding
+                                    ? Colors.pinkAccent
+                                    : (isSleeping ? Colors.indigoAccent : const Color(0xFF34D399)),
+                                shape: BoxShape.circle,
+                              ),
+                            ),
+                            const SizedBox(width: 6),
+                            Text(
+                              isCurrentlyFeeding
+                                  ? 'Đang bú mẹ'
+                                  : (isSleeping ? 'Đang ngủ' : 'Đang thức'),
+                              style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold),
+                            ),
+                          ],
                         ),
-                      ],
-                    ),
+                      ),
+                    ],
                   ),
-                  const SizedBox(width: 10),
+                  const SizedBox(height: 12),
+                  // EASY Pulse: Quãng thời gian từ cữ bú & cữ ngủ gần nhất
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
                     decoration: BoxDecoration(
-                      color: isCurrentlyFeeding
-                          ? AppTheme.brand700.withValues(alpha: 0.6)
-                          : (isSleeping
-                              ? Colors.indigo.shade900.withValues(alpha: 0.6)
-                              : const Color(0xFF064E3B).withValues(alpha: 0.6)),
+                      color: Colors.white.withValues(alpha: 0.16),
                       borderRadius: BorderRadius.circular(14),
-                      border: Border.all(color: Colors.white.withValues(alpha: 0.35)),
+                      border: Border.all(color: Colors.white.withValues(alpha: 0.22)),
                     ),
                     child: Row(
-                      mainAxisSize: MainAxisSize.min,
                       children: [
-                        Container(
-                          width: 8,
-                          height: 8,
-                          decoration: BoxDecoration(
-                            color: isCurrentlyFeeding
-                                ? Colors.pinkAccent
-                                : (isSleeping ? Colors.indigoAccent : const Color(0xFF34D399)),
-                            shape: BoxShape.circle,
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                isCurrentlyFeeding ? '🍼 Đang bú' : '🍼 Bú gần nhất',
+                                style: TextStyle(
+                                  color: Colors.white.withValues(alpha: 0.85),
+                                  fontSize: 10.5,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                effectiveFeeding?.formatElapsedHero() ?? 'Chưa có cữ bú',
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 11.5,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ],
                           ),
                         ),
-                        const SizedBox(width: 6),
-                        Text(
-                          isCurrentlyFeeding
-                              ? 'Đang bú mẹ'
-                              : (isSleeping ? 'Đang ngủ' : 'Đang thức'),
-                          style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold),
+                        Container(
+                          width: 1,
+                          height: 26,
+                          margin: const EdgeInsets.symmetric(horizontal: 8),
+                          color: Colors.white.withValues(alpha: 0.25),
+                        ),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                isSleeping ? '😴 Đang ngủ' : '☀️ Đã thức',
+                                style: TextStyle(
+                                  color: Colors.white.withValues(alpha: 0.85),
+                                  fontSize: 10.5,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                effectiveSleep?.formatElapsedHero() ?? 'Bé đang thức',
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 11.5,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ],
+                          ),
                         ),
                       ],
                     ),
@@ -224,7 +398,7 @@ class DashboardView extends StatelessWidget {
                           onTap: () {
                             HapticFeedback.selectionClick();
                             activityProvider.setFilterType('feeding', baby.id);
-                            onTabChange(1);
+                            widget.onTabChange(1);
                           },
                           child: Padding(
                             padding: const EdgeInsets.all(14),
@@ -293,21 +467,29 @@ class DashboardView extends StatelessWidget {
                                         ),
                                       ),
                                       const SizedBox(width: 5),
-                                      const Text(
-                                        'Đang bú mẹ...',
-                                        style: TextStyle(
-                                          fontSize: 11,
-                                          color: AppTheme.brand500,
-                                          fontWeight: FontWeight.bold,
+                                      Flexible(
+                                        child: Text(
+                                          'Đang bú (${effectiveFeeding?.formatElapsedCard() ?? "..."})',
+                                          style: const TextStyle(
+                                            fontSize: 11,
+                                            color: AppTheme.brand500,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                          overflow: TextOverflow.ellipsis,
                                         ),
                                       ),
                                     ] else ...[
-                                      Text(
-                                        breastCount > 0 ? '$breastCount cữ bú mẹ' : 'Hôm nay',
-                                        style: TextStyle(
-                                          fontSize: 11,
-                                          color: isDark ? AppTheme.gray400 : AppTheme.gray500,
-                                          fontWeight: FontWeight.w500,
+                                      Flexible(
+                                        child: Text(
+                                          effectiveFeeding?.lastFeedingTime != null
+                                              ? 'Cách đây: ${effectiveFeeding!.formatElapsedCard()}'
+                                              : (breastCount > 0 ? '$breastCount cữ bú mẹ' : 'Hôm nay'),
+                                          style: TextStyle(
+                                            fontSize: 11,
+                                            color: isDark ? AppTheme.gray400 : AppTheme.gray600,
+                                            fontWeight: FontWeight.w600,
+                                          ),
+                                          overflow: TextOverflow.ellipsis,
                                         ),
                                       ),
                                     ],
@@ -427,7 +609,7 @@ class DashboardView extends StatelessWidget {
                           onTap: () {
                             HapticFeedback.selectionClick();
                             activityProvider.setFilterType('sleeping', baby.id);
-                            onTabChange(1);
+                            widget.onTabChange(1);
                           },
                           child: Padding(
                             padding: const EdgeInsets.all(14),
@@ -483,21 +665,29 @@ class DashboardView extends StatelessWidget {
                                         ),
                                       ),
                                       const SizedBox(width: 5),
-                                      const Text(
-                                        'Đang ngủ ngon...',
-                                        style: TextStyle(
-                                          fontSize: 11,
-                                          color: AppTheme.indigo500,
-                                          fontWeight: FontWeight.bold,
+                                      Flexible(
+                                        child: Text(
+                                          'Đang ngủ (${effectiveSleep?.formatElapsedCard() ?? "..."})',
+                                          style: const TextStyle(
+                                            fontSize: 11,
+                                            color: AppTheme.indigo500,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                          overflow: TextOverflow.ellipsis,
                                         ),
                                       ),
                                     ] else ...[
-                                      Text(
-                                        'Hôm nay',
-                                        style: TextStyle(
-                                          fontSize: 11,
-                                          color: isDark ? AppTheme.gray400 : AppTheme.gray500,
-                                          fontWeight: FontWeight.w500,
+                                      Flexible(
+                                        child: Text(
+                                          effectiveSleep?.lastSleepEnd != null
+                                              ? 'Đã thức: ${effectiveSleep!.formatElapsedCard()}'
+                                              : 'Hôm nay',
+                                          style: TextStyle(
+                                            fontSize: 11,
+                                            color: isDark ? AppTheme.gray400 : AppTheme.gray600,
+                                            fontWeight: FontWeight.w600,
+                                          ),
+                                          overflow: TextOverflow.ellipsis,
                                         ),
                                       ),
                                     ],
@@ -586,7 +776,7 @@ class DashboardView extends StatelessWidget {
                 onTap: () {
                   HapticFeedback.selectionClick();
                   activityProvider.setFilterType('feeding', baby.id);
-                  onTabChange(1);
+                  widget.onTabChange(1);
                 },
                 child: Container(
                   width: double.infinity,
@@ -764,7 +954,7 @@ class DashboardView extends StatelessWidget {
               child: InkWell(
                 onTap: () {
                   HapticFeedback.selectionClick();
-                  onTabChange(3);
+                  widget.onTabChange(3);
                 },
                 borderRadius: BorderRadius.circular(18),
                 child: Container(
@@ -841,7 +1031,7 @@ class DashboardView extends StatelessWidget {
                       borderRadius: BorderRadius.circular(18),
                       onTap: () {
                         HapticFeedback.selectionClick();
-                        onTabChange(2);
+                        widget.onTabChange(2);
                       },
                       child: Container(
                         padding: const EdgeInsets.all(14),
@@ -1082,7 +1272,7 @@ class DashboardView extends StatelessWidget {
                   onPressed: () {
                     HapticFeedback.selectionClick();
                     activityProvider.setFilterType('all', baby.id);
-                    onTabChange(1);
+                    widget.onTabChange(1);
                   },
                   child: const Text('Xem tất cả →', style: TextStyle(fontSize: 12.5, color: AppTheme.brand500, fontWeight: FontWeight.w600)),
                 ),

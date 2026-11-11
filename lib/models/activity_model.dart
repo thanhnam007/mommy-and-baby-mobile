@@ -98,6 +98,9 @@ class FeedingSummaryModel {
   final int totalNursingMinutes;
   final int feedingCount;
   final String? lastFeedingTime;
+  final String? lastFeedingEnd;
+  final int? minutesSinceLastFeeding;
+  final int? currentFeedingDurationMinutes;
   final bool isCurrentlyFeeding;
   final int? currentFeedingId;
   final String? currentFeedingStart;
@@ -117,6 +120,9 @@ class FeedingSummaryModel {
     required this.totalNursingMinutes,
     required this.feedingCount,
     this.lastFeedingTime,
+    this.lastFeedingEnd,
+    this.minutesSinceLastFeeding,
+    this.currentFeedingDurationMinutes,
     required this.isCurrentlyFeeding,
     this.currentFeedingId,
     this.currentFeedingStart,
@@ -130,12 +136,57 @@ class FeedingSummaryModel {
     this.bottleBreastMl = 0,
   });
 
+  String formatElapsedHero([DateTime? now]) {
+    final current = now ?? DateTime.now();
+    if (isCurrentlyFeeding && currentFeedingStart != null) {
+      try {
+        final start = DateTime.parse(currentFeedingStart!).toLocal();
+        final diffSec = current.difference(start).inSeconds;
+        final dur = _formatLiveDuration(diffSec);
+        final t = _formatTimeOnly(start);
+        return '$dur (từ $t)';
+      } catch (_) {}
+    }
+    if (lastFeedingTime != null) {
+      try {
+        final start = DateTime.parse(lastFeedingTime!).toLocal();
+        final diffSec = current.difference(start).inSeconds;
+        final ago = _formatLiveElapsedAgo(diffSec);
+        final t = _formatTimeOnly(start);
+        return '$ago ($t)';
+      } catch (_) {}
+    }
+    return 'Chưa có cữ bú';
+  }
+
+  String formatElapsedCard([DateTime? now]) {
+    final current = now ?? DateTime.now();
+    if (isCurrentlyFeeding && currentFeedingStart != null) {
+      try {
+        final start = DateTime.parse(currentFeedingStart!).toLocal();
+        final diffSec = current.difference(start).inSeconds;
+        return _formatLiveDuration(diffSec);
+      } catch (_) {}
+    }
+    if (lastFeedingTime != null) {
+      try {
+        final start = DateTime.parse(lastFeedingTime!).toLocal();
+        final diffSec = current.difference(start).inSeconds;
+        return _formatLiveElapsedAgo(diffSec);
+      } catch (_) {}
+    }
+    return 'Chưa có';
+  }
+
   factory FeedingSummaryModel.fromJson(Map<String, dynamic> json) {
     return FeedingSummaryModel(
       totalMl: json['total_ml'] ?? 0,
       totalNursingMinutes: json['total_nursing_minutes'] ?? 0,
       feedingCount: json['feeding_count'] ?? 0,
       lastFeedingTime: json['last_feeding_time'],
+      lastFeedingEnd: json['last_feeding_end'],
+      minutesSinceLastFeeding: json['minutes_since_last_feeding'],
+      currentFeedingDurationMinutes: json['current_feeding_duration_minutes'],
       isCurrentlyFeeding: json['is_currently_feeding'] == true,
       currentFeedingId: json['current_feeding_id'],
       currentFeedingStart: json['current_feeding_start'],
@@ -158,6 +209,10 @@ class SleepSummaryModel {
   final bool isCurrentlySleeping;
   final int? currentSleepId;
   final String? currentSleepStart;
+  final int? currentSleepDurationMinutes;
+  final String? lastSleepStart;
+  final String? lastSleepEnd;
+  final int? minutesSinceLastSleep;
 
   SleepSummaryModel({
     required this.totalSleepMinutes,
@@ -166,7 +221,53 @@ class SleepSummaryModel {
     required this.isCurrentlySleeping,
     this.currentSleepId,
     this.currentSleepStart,
+    this.currentSleepDurationMinutes,
+    this.lastSleepStart,
+    this.lastSleepEnd,
+    this.minutesSinceLastSleep,
   });
+
+  String formatElapsedHero([DateTime? now]) {
+    final current = now ?? DateTime.now();
+    if (isCurrentlySleeping && currentSleepStart != null) {
+      try {
+        final start = DateTime.parse(currentSleepStart!).toLocal();
+        final diffSec = current.difference(start).inSeconds;
+        final dur = _formatLiveDuration(diffSec);
+        final t = _formatTimeOnly(start);
+        return '$dur (từ $t)';
+      } catch (_) {}
+    }
+    if (lastSleepEnd != null) {
+      try {
+        final end = DateTime.parse(lastSleepEnd!).toLocal();
+        final diffSec = current.difference(end).inSeconds;
+        final dur = _formatLiveDuration(diffSec);
+        final t = _formatTimeOnly(end);
+        return '$dur (dậy $t)';
+      } catch (_) {}
+    }
+    return 'Bé đang thức';
+  }
+
+  String formatElapsedCard([DateTime? now]) {
+    final current = now ?? DateTime.now();
+    if (isCurrentlySleeping && currentSleepStart != null) {
+      try {
+        final start = DateTime.parse(currentSleepStart!).toLocal();
+        final diffSec = current.difference(start).inSeconds;
+        return _formatLiveDuration(diffSec);
+      } catch (_) {}
+    }
+    if (lastSleepEnd != null) {
+      try {
+        final end = DateTime.parse(lastSleepEnd!).toLocal();
+        final diffSec = current.difference(end).inSeconds;
+        return _formatLiveDuration(diffSec);
+      } catch (_) {}
+    }
+    return 'Chưa có';
+  }
 
   factory SleepSummaryModel.fromJson(Map<String, dynamic> json) {
     return SleepSummaryModel(
@@ -176,6 +277,58 @@ class SleepSummaryModel {
       isCurrentlySleeping: json['is_currently_sleeping'] == true,
       currentSleepId: json['current_sleep_id'],
       currentSleepStart: json['current_sleep_start'],
+      currentSleepDurationMinutes: json['current_sleep_duration_minutes'],
+      lastSleepStart: json['last_sleep_start'],
+      lastSleepEnd: json['last_sleep_end'],
+      minutesSinceLastSleep: json['minutes_since_last_sleep'],
     );
   }
+}
+
+String _formatLiveDuration(int totalSeconds) {
+  final sec = totalSeconds >= 0 ? totalSeconds : 0;
+  if (sec < 60) return '$sec s';
+  final m = (sec ~/ 60) % 60;
+  final h = sec ~/ 3600;
+  final s = sec % 60;
+  if (h > 0) return '${h}g ${m}p ${s}s';
+  return '${m}p ${s}s';
+}
+
+String _formatLiveElapsedAgo(int totalSeconds) {
+  final sec = totalSeconds >= 0 ? totalSeconds : 0;
+  if (sec < 60) return '$sec s trước';
+  final totalMins = sec ~/ 60;
+  final m = totalMins % 60;
+  final h = totalMins ~/ 60;
+  final s = sec % 60;
+  if (h >= 24) {
+    return '${h ~/ 24} ngày trước';
+  }
+  if (h > 0) return '${h}g ${m}p ${s}s trước';
+  return '${m}p ${s}s trước';
+}
+
+String _formatDurationMinutes(int mins) {
+  if (mins < 60) return '$mins phút';
+  final h = mins ~/ 60;
+  final m = mins % 60;
+  return m > 0 ? '${h}g ${m}p' : '$h giờ';
+}
+
+String _formatElapsedAgo(int mins) {
+  if (mins < 1) return 'Vừa xong';
+  if (mins < 60) return '$mins phút trước';
+  final h = mins ~/ 60;
+  final m = mins % 60;
+  if (h >= 24) {
+    return '${h ~/ 24} ngày trước';
+  }
+  return m > 0 ? '${h}g ${m}p trước' : '$h giờ trước';
+}
+
+String _formatTimeOnly(DateTime dt) {
+  final h = dt.hour.toString().padLeft(2, '0');
+  final m = dt.minute.toString().padLeft(2, '0');
+  return '$h:$m';
 }

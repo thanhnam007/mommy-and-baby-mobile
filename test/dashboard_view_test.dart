@@ -191,4 +191,65 @@ void main() {
       expect(buttons[1].onPressed, isNull);
     },
   );
+
+  testWidgets(
+    'DashboardView displays elapsed time for last feeding and wake window for last sleep',
+    (WidgetTester tester) async {
+      final babyProvider = BabyProvider();
+      await babyProvider.selectBaby(
+        BabyModel(
+          id: 1,
+          name: 'Bé Bơ',
+          gender: 'girl',
+          birthDate: '2026-05-01',
+          ageText: '6 tháng',
+        ),
+      );
+
+      final now = DateTime.now();
+      final feedingTime = now.subtract(const Duration(hours: 2, minutes: 15)).toIso8601String();
+      final wakeTime = now.subtract(const Duration(hours: 1, minutes: 30)).toIso8601String();
+
+      final activityProvider = ActivityProvider();
+      activityProvider.setSummariesForTesting(
+        feedingSummary: FeedingSummaryModel(
+          feedingCount: 3,
+          totalMl: 360,
+          totalNursingMinutes: 0,
+          lastFeedingTime: feedingTime,
+          isCurrentlyFeeding: false,
+        ),
+        sleepSummary: SleepSummaryModel(
+          sleepCount: 2,
+          totalSleepMinutes: 120,
+          totalSleepFormatted: '2g 0p',
+          isCurrentlySleeping: false,
+          lastSleepEnd: wakeTime,
+        ),
+      );
+
+      final growthProvider = GrowthProvider();
+      final pumpingProvider = PumpingProvider();
+
+      await tester.pumpWidget(
+        buildTestableWidget(
+          babyProvider: babyProvider,
+          activityProvider: activityProvider,
+          growthProvider: growthProvider,
+          pumpingProvider: pumpingProvider,
+          onTabChange: (_) {},
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // Verify EASY Pulse in Hero card
+      expect(find.text('🍼 Bú gần nhất'), findsOneWidget);
+      expect(find.text('☀️ Đã thức'), findsOneWidget);
+
+      // Verify elapsed time text exists
+      expect(find.textContaining('2g 15p'), findsWidgets);
+      expect(find.textContaining('1g 30p'), findsWidgets);
+      expect(find.textContaining('Đã thức: 1g 30p'), findsOneWidget);
+    },
+  );
 }
