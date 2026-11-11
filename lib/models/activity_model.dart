@@ -147,13 +147,14 @@ class FeedingSummaryModel {
         return '$dur (từ $t)';
       } catch (_) {}
     }
-    if (lastFeedingTime != null) {
+    final refTime = lastFeedingEnd ?? lastFeedingTime;
+    if (refTime != null) {
       try {
-        final start = DateTime.parse(lastFeedingTime!).toLocal();
-        final diffSec = current.difference(start).inSeconds;
+        final endDt = DateTime.parse(refTime).toLocal();
+        final diffSec = current.difference(endDt).inSeconds;
         final ago = _formatLiveElapsedAgo(diffSec);
-        final t = _formatTimeOnly(start);
-        return '$ago ($t)';
+        final t = _formatTimeOnly(endDt);
+        return '$ago (xong $t)';
       } catch (_) {}
     }
     return 'Chưa có cữ bú';
@@ -168,10 +169,11 @@ class FeedingSummaryModel {
         return _formatLiveDuration(diffSec);
       } catch (_) {}
     }
-    if (lastFeedingTime != null) {
+    final refTime = lastFeedingEnd ?? lastFeedingTime;
+    if (refTime != null) {
       try {
-        final start = DateTime.parse(lastFeedingTime!).toLocal();
-        final diffSec = current.difference(start).inSeconds;
+        final endDt = DateTime.parse(refTime).toLocal();
+        final diffSec = current.difference(endDt).inSeconds;
         return _formatLiveElapsedAgo(diffSec);
       } catch (_) {}
     }

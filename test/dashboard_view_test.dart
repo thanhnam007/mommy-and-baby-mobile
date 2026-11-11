@@ -207,7 +207,8 @@ void main() {
       );
 
       final now = DateTime.now();
-      final feedingTime = now.subtract(const Duration(hours: 2, minutes: 15)).toIso8601String();
+      final feedingStartTime = now.subtract(const Duration(hours: 2, minutes: 35)).toIso8601String();
+      final feedingEndTime = now.subtract(const Duration(hours: 2, minutes: 15)).toIso8601String();
       final wakeTime = now.subtract(const Duration(hours: 1, minutes: 30)).toIso8601String();
 
       final activityProvider = ActivityProvider();
@@ -216,7 +217,8 @@ void main() {
           feedingCount: 3,
           totalMl: 360,
           totalNursingMinutes: 0,
-          lastFeedingTime: feedingTime,
+          lastFeedingTime: feedingStartTime,
+          lastFeedingEnd: feedingEndTime,
           isCurrentlyFeeding: false,
         ),
         sleepSummary: SleepSummaryModel(

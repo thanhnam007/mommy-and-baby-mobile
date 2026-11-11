@@ -239,8 +239,8 @@ class ActivityProvider extends ChangeNotifier {
         'baby_id': babyId,
         'feeding_type': feedingType,
         'amount_ml': amountMl,
-        'start_time': t.toUtc().toIso8601String(),
-        'end_time': t.add(const Duration(minutes: 15)).toUtc().toIso8601String(),
+        'start_time': t.subtract(const Duration(minutes: 15)).toUtc().toIso8601String(),
+        'end_time': t.toUtc().toIso8601String(),
         if (notes != null) 'notes': notes,
       });
       if (res.statusCode == 200 || res.statusCode == 201) {

@@ -81,12 +81,14 @@ class _DashboardViewState extends State<DashboardView> {
     final isFeedingLoading = activityProvider.isFeedingActionLoading;
     final isSleepLoading = activityProvider.isSleepActionLoading;
 
-    // Fallback từ timeline nếu backend summary chưa có lastFeedingTime hoặc lastSleepEnd
+    // Fallback từ timeline nếu backend summary chưa có lastFeedingEnd / lastFeedingTime hoặc lastSleepEnd
     String? fallbackLastFeedingTime = feeding?.lastFeedingTime;
-    if (fallbackLastFeedingTime == null && activityProvider.allTimeline.isNotEmpty) {
+    String? fallbackLastFeedingEnd = feeding?.lastFeedingEnd;
+    if (fallbackLastFeedingEnd == null && activityProvider.allTimeline.isNotEmpty) {
       for (final a in activityProvider.allTimeline) {
         if (a.activityType == 'feeding') {
-          fallbackLastFeedingTime = a.startTime;
+          fallbackLastFeedingTime ??= a.startTime;
+          fallbackLastFeedingEnd = a.endTime ?? a.startTime;
           break;
         }
       }
@@ -107,7 +109,7 @@ class _DashboardViewState extends State<DashboardView> {
             totalNursingMinutes: feeding.totalNursingMinutes,
             feedingCount: feeding.feedingCount,
             lastFeedingTime: fallbackLastFeedingTime,
-            lastFeedingEnd: feeding.lastFeedingEnd,
+            lastFeedingEnd: fallbackLastFeedingEnd,
             minutesSinceLastFeeding: feeding.minutesSinceLastFeeding,
             currentFeedingDurationMinutes: feeding.currentFeedingDurationMinutes,
             isCurrentlyFeeding: feeding.isCurrentlyFeeding,
@@ -122,12 +124,13 @@ class _DashboardViewState extends State<DashboardView> {
             bottleBreastCount: feeding.bottleBreastCount,
             bottleBreastMl: feeding.bottleBreastMl,
           )
-        : (fallbackLastFeedingTime != null
+        : ((fallbackLastFeedingEnd != null || fallbackLastFeedingTime != null)
             ? FeedingSummaryModel(
                 totalMl: 0,
                 totalNursingMinutes: 0,
                 feedingCount: 0,
                 lastFeedingTime: fallbackLastFeedingTime,
+                lastFeedingEnd: fallbackLastFeedingEnd,
                 isCurrentlyFeeding: false,
               )
             : null);
@@ -481,8 +484,8 @@ class _DashboardViewState extends State<DashboardView> {
                                     ] else ...[
                                       Flexible(
                                         child: Text(
-                                          effectiveFeeding?.lastFeedingTime != null
-                                              ? 'Cách đây: ${effectiveFeeding!.formatElapsedCard()}'
+                                          (effectiveFeeding?.lastFeedingEnd != null || effectiveFeeding?.lastFeedingTime != null)
+                                              ? 'Bú xong: ${effectiveFeeding!.formatElapsedCard()}'
                                               : (breastCount > 0 ? '$breastCount cữ bú mẹ' : 'Hôm nay'),
                                           style: TextStyle(
                                             fontSize: 11,
