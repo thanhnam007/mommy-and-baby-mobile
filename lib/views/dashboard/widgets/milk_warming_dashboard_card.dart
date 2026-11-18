@@ -184,11 +184,11 @@ class MilkWarmingDashboardCard extends StatelessWidget {
           // Body State
           if (isWarming) ...[
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
               decoration: BoxDecoration(
                 color: Colors.amber.withValues(alpha: 0.15),
-                borderRadius: BorderRadius.circular(14),
-                border: Border.all(color: Colors.amber.shade300),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: Colors.amber.shade400, width: 1.2),
               ),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -196,25 +196,58 @@ class MilkWarmingDashboardCard extends StatelessWidget {
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text(
-                        'Thời gian đang hâm (Live):',
-                        style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.bold, color: Colors.amber),
+                      Row(
+                        children: [
+                          Container(
+                            width: 6,
+                            height: 6,
+                            decoration: const BoxDecoration(color: Colors.amber, shape: BoxShape.circle),
+                          ),
+                          const SizedBox(width: 5),
+                          const Text(
+                            'THỜI GIAN ĐANG HÂM (LIVE)',
+                            style: TextStyle(fontSize: 10, fontWeight: FontWeight.w900, color: Colors.amber, letterSpacing: 0.3),
+                          ),
+                        ],
                       ),
-                      const SizedBox(height: 2),
+                      const SizedBox(height: 4),
                       Text(
                         '⏱️ ${MilkWarmingProvider.formatSecondsToDigital(provider.liveActiveDurationSeconds)}',
                         style: TextStyle(
-                          fontSize: 18,
+                          fontSize: 24,
                           fontWeight: FontWeight.w900,
                           color: Colors.amber.shade900,
                           fontFamily: 'monospace',
+                          letterSpacing: -0.5,
                         ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        'Máy hâm đang hoạt động',
+                        style: TextStyle(fontSize: 10.5, color: Colors.amber.shade800, fontWeight: FontWeight.w500),
                       ),
                     ],
                   ),
-                  Text(
-                    '${provider.status?.activeWarming?.amountMl} ml',
-                    style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: isDark ? AppTheme.gray800 : Colors.white,
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(color: Colors.amber.shade200),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        const Text(
+                          'Dung tích',
+                          style: TextStyle(fontSize: 9.5, color: Colors.amber, fontWeight: FontWeight.bold),
+                        ),
+                        Text(
+                          '${provider.status?.activeWarming?.amountMl} ml',
+                          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w900, fontFamily: 'monospace'),
+                        ),
+                      ],
+                    ),
                   ),
                 ],
               ),
@@ -343,16 +376,25 @@ class MilkWarmingDashboardCard extends StatelessWidget {
             ),
           ] else if (isOver2h) ...[
             Container(
-              padding: const EdgeInsets.all(10),
+              padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: Colors.red.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(14),
-                border: Border.all(color: Colors.red.shade200),
+                color: Colors.red.withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: Colors.red.shade300, width: 1.2),
               ),
               child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text('⚠️', style: TextStyle(fontSize: 16)),
-                  const SizedBox(width: 8),
+                  Container(
+                    width: 36,
+                    height: 36,
+                    decoration: BoxDecoration(
+                      color: Colors.red.shade100,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: const Center(child: Text('⚠️', style: TextStyle(fontSize: 18))),
+                  ),
+                  const SizedBox(width: 10),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -361,9 +403,23 @@ class MilkWarmingDashboardCard extends StatelessWidget {
                           'CẦN HÂM SỮA MỚI',
                           style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.red),
                         ),
+                        const SizedBox(height: 3),
                         Text(
                           '⏱️ Đã quá 2 tiếng (${MilkWarmingProvider.formatSecondsToDurationText(provider.liveSecondsSinceLastWarming ?? 0)} trước)',
-                          style: TextStyle(fontSize: 11, color: Colors.red.shade800, fontWeight: FontWeight.w600),
+                          style: TextStyle(
+                            fontSize: 14.5,
+                            fontWeight: FontWeight.w900,
+                            fontFamily: 'monospace',
+                            color: Colors.red.shade800,
+                            letterSpacing: -0.3,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          'Sữa đã quá 2h an toàn. Mẹ vui lòng đổ bỏ và hâm bình mới nhé!',
+                          style: TextStyle(fontSize: 10.5, color: Colors.red.shade900, fontWeight: FontWeight.w500),
                         ),
                       ],
                     ),
@@ -420,17 +476,36 @@ class MilkWarmingDashboardCard extends StatelessWidget {
                   child: Container(
                     padding: const EdgeInsets.all(9),
                     decoration: BoxDecoration(
-                      color: const Color(0xFF10B981).withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(12),
+                      color: Colors.teal.withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(color: Colors.teal.shade200),
                     ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text('Đã hâm cách đây:', style: TextStyle(fontSize: 10, color: Color(0xFF059669), fontWeight: FontWeight.bold)),
-                        const SizedBox(height: 2),
+                        const Text(
+                          'Còn an toàn:',
+                          style: TextStyle(fontSize: 10, color: Colors.teal, fontWeight: FontWeight.bold),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        const SizedBox(height: 3),
                         Text(
-                          MilkWarmingProvider.formatElapsedAgo(lastCompleted.endDateTime),
-                          style: const TextStyle(fontSize: 11.5, fontWeight: FontWeight.bold, color: Color(0xFF059669)),
+                          '⏱️ ${MilkWarmingProvider.formatSecondsToDigital(provider.liveSafeRemainingSeconds ?? 0)}',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w900,
+                            color: Colors.teal.shade800,
+                            fontFamily: 'monospace',
+                            letterSpacing: -0.5,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        const SizedBox(height: 1),
+                        Text(
+                          'Còn ${MilkWarmingProvider.formatSecondsToDurationText(provider.liveSafeRemainingSeconds ?? 0)}',
+                          style: TextStyle(fontSize: 10, fontWeight: FontWeight.w600, color: Colors.teal.shade700),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                         ),
@@ -443,17 +518,36 @@ class MilkWarmingDashboardCard extends StatelessWidget {
                   child: Container(
                     padding: const EdgeInsets.all(9),
                     decoration: BoxDecoration(
-                      color: Colors.teal.withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(12),
+                      color: const Color(0xFF10B981).withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(color: const Color(0xFF6EE7B7)),
                     ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text('Còn an toàn:', style: TextStyle(fontSize: 10, color: Colors.teal, fontWeight: FontWeight.bold)),
-                        const SizedBox(height: 2),
+                        const Text(
+                          'Đã hâm cách đây:',
+                          style: TextStyle(fontSize: 10, color: Color(0xFF059669), fontWeight: FontWeight.bold),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        const SizedBox(height: 3),
                         Text(
-                          '⏱️ ${MilkWarmingProvider.formatSecondsToDurationText(provider.liveSafeRemainingSeconds ?? 0)}',
-                          style: const TextStyle(fontSize: 11.5, fontWeight: FontWeight.bold, color: Colors.teal, fontFamily: 'monospace'),
+                          MilkWarmingProvider.formatElapsedAgo(lastCompleted.endDateTime),
+                          style: const TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w900,
+                            color: Color(0xFF047857),
+                            fontFamily: 'monospace',
+                            letterSpacing: -0.3,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        const SizedBox(height: 1),
+                        Text(
+                          'Bình ${lastCompleted.amountMl}ml',
+                          style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w600, color: Color(0xFF059669)),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                         ),

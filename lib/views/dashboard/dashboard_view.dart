@@ -300,35 +300,66 @@ class _DashboardViewState extends State<DashboardView> {
                     ],
                   ),
                   const SizedBox(height: 12),
-                  // EASY Pulse: Quãng thời gian từ cữ bú & cữ ngủ gần nhất
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.16),
-                      borderRadius: BorderRadius.circular(14),
-                      border: Border.all(color: Colors.white.withValues(alpha: 0.22)),
-                    ),
-                    child: Row(
-                      children: [
-                        Expanded(
+                  // EASY Pulse Pro Max: Quãng thời gian từ cữ bú & cữ ngủ gần nhất (Số to nổi bật)
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 9),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withValues(alpha: 0.18),
+                            borderRadius: BorderRadius.circular(14),
+                            border: Border.all(color: Colors.white.withValues(alpha: 0.25)),
+                          ),
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text(
-                                isCurrentlyFeeding ? '🍼 Đang bú' : '🍼 Bú gần nhất',
-                                style: TextStyle(
-                                  color: Colors.white.withValues(alpha: 0.85),
-                                  fontSize: 10.5,
-                                  fontWeight: FontWeight.w500,
+                              Row(
+                                children: [
+                                  Flexible(
+                                    child: Text(
+                                      isCurrentlyFeeding ? '🍼 Đang bú' : '🍼 Bú gần nhất',
+                                      style: TextStyle(
+                                        color: Colors.white.withValues(alpha: 0.9),
+                                        fontSize: 10.5,
+                                        fontWeight: FontWeight.w700,
+                                      ),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                  if (isCurrentlyFeeding) ...[
+                                    const SizedBox(width: 4),
+                                    Container(
+                                      width: 6,
+                                      height: 6,
+                                      decoration: const BoxDecoration(color: Colors.pinkAccent, shape: BoxShape.circle),
+                                    ),
+                                  ],
+                                ],
+                              ),
+                              const SizedBox(height: 3),
+                              FittedBox(
+                                fit: BoxFit.scaleDown,
+                                alignment: Alignment.centerLeft,
+                                child: Text(
+                                  effectiveFeeding?.formatElapsedCard() ?? 'Chưa có cữ',
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 16.5,
+                                    fontWeight: FontWeight.w900,
+                                    fontFamily: 'monospace',
+                                    letterSpacing: -0.3,
+                                  ),
                                 ),
                               ),
-                              const SizedBox(height: 2),
+                              const SizedBox(height: 1),
                               Text(
-                                effectiveFeeding?.formatElapsedHero() ?? 'Chưa có cữ bú',
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 11.5,
-                                  fontWeight: FontWeight.bold,
+                                effectiveFeeding?.formatSubtext() ?? 'Chưa ghi nhận',
+                                style: TextStyle(
+                                  color: Colors.white.withValues(alpha: 0.8),
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w500,
                                 ),
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
@@ -336,31 +367,65 @@ class _DashboardViewState extends State<DashboardView> {
                             ],
                           ),
                         ),
-                        Container(
-                          width: 1,
-                          height: 26,
-                          margin: const EdgeInsets.symmetric(horizontal: 8),
-                          color: Colors.white.withValues(alpha: 0.25),
-                        ),
-                        Expanded(
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 9),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withValues(alpha: 0.18),
+                            borderRadius: BorderRadius.circular(14),
+                            border: Border.all(color: Colors.white.withValues(alpha: 0.25)),
+                          ),
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text(
-                                isSleeping ? '😴 Đang ngủ' : '☀️ Đã thức',
-                                style: TextStyle(
-                                  color: Colors.white.withValues(alpha: 0.85),
-                                  fontSize: 10.5,
-                                  fontWeight: FontWeight.w500,
+                              Row(
+                                children: [
+                                  Flexible(
+                                    child: Text(
+                                      isSleeping ? '😴 Đang ngủ' : '☀️ Đã thức',
+                                      style: TextStyle(
+                                        color: Colors.white.withValues(alpha: 0.9),
+                                        fontSize: 10.5,
+                                        fontWeight: FontWeight.w700,
+                                      ),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                  if (isSleeping) ...[
+                                    const SizedBox(width: 4),
+                                    Container(
+                                      width: 6,
+                                      height: 6,
+                                      decoration: const BoxDecoration(color: Colors.indigoAccent, shape: BoxShape.circle),
+                                    ),
+                                  ],
+                                ],
+                              ),
+                              const SizedBox(height: 3),
+                              FittedBox(
+                                fit: BoxFit.scaleDown,
+                                alignment: Alignment.centerLeft,
+                                child: Text(
+                                  effectiveSleep?.formatElapsedCard() ?? 'Bé đang thức',
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 16.5,
+                                    fontWeight: FontWeight.w900,
+                                    fontFamily: 'monospace',
+                                    letterSpacing: -0.3,
+                                  ),
                                 ),
                               ),
-                              const SizedBox(height: 2),
+                              const SizedBox(height: 1),
                               Text(
-                                effectiveSleep?.formatElapsedHero() ?? 'Bé đang thức',
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 11.5,
-                                  fontWeight: FontWeight.bold,
+                                effectiveSleep?.formatSubtext() ?? 'Bé đang thức',
+                                style: TextStyle(
+                                  color: Colors.white.withValues(alpha: 0.8),
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w500,
                                 ),
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
@@ -368,8 +433,8 @@ class _DashboardViewState extends State<DashboardView> {
                             ],
                           ),
                         ),
-                      ],
-                    ),
+                      ),
+                    ],
                   ),
                 ],
               ),
@@ -446,66 +511,73 @@ class _DashboardViewState extends State<DashboardView> {
                                     ),
                                   ],
                                 ),
-                                const SizedBox(height: 12),
-                                Row(
-                                  crossAxisAlignment: CrossAxisAlignment.baseline,
-                                  textBaseline: TextBaseline.alphabetic,
-                                  children: [
-                                    Text(
-                                      '${feeding?.totalMl ?? 0}',
-                                      style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w900),
-                                    ),
-                                    const SizedBox(width: 4),
-                                    Text(
-                                      'ml sữa',
-                                      style: TextStyle(
-                                        fontSize: 11,
-                                        color: isDark ? AppTheme.gray400 : AppTheme.gray500,
-                                        fontWeight: FontWeight.w500,
-                                      ),
-                                    ),
-                                  ],
+                                const SizedBox(height: 10),
+                                Text(
+                                  isCurrentlyFeeding ? 'Thời gian đang bú:' : 'Bú xong cách đây:',
+                                  style: TextStyle(
+                                    fontSize: 10.5,
+                                    color: isDark ? AppTheme.gray400 : AppTheme.gray600,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
                                 ),
-                                const SizedBox(height: 4),
-                                Row(
-                                  children: [
-                                    if (isCurrentlyFeeding) ...[
-                                      Container(
-                                        width: 6,
-                                        height: 6,
-                                        decoration: const BoxDecoration(
-                                          color: AppTheme.brand500,
-                                          shape: BoxShape.circle,
-                                        ),
+                                const SizedBox(height: 2),
+                                FittedBox(
+                                  fit: BoxFit.scaleDown,
+                                  alignment: Alignment.centerLeft,
+                                  child: Text(
+                                    effectiveFeeding?.formatElapsedCard() ?? 'Chưa có cữ',
+                                    style: TextStyle(
+                                      fontSize: 20,
+                                      fontWeight: FontWeight.w900,
+                                      fontFamily: 'monospace',
+                                      color: isCurrentlyFeeding
+                                          ? AppTheme.brand500
+                                          : (isDark ? Colors.white : AppTheme.gray900),
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  effectiveFeeding?.formatSubtext() ?? '',
+                                  style: TextStyle(
+                                    fontSize: 10.5,
+                                    color: isDark ? AppTheme.gray400 : AppTheme.gray500,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                                const SizedBox(height: 8),
+                                Container(
+                                  width: double.infinity,
+                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                  decoration: BoxDecoration(
+                                    color: isDark ? AppTheme.brand500.withValues(alpha: 0.15) : AppTheme.brand50,
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      const Text(
+                                        'Hôm nay:',
+                                        style: TextStyle(fontSize: 9.5, color: AppTheme.brand500, fontWeight: FontWeight.bold),
                                       ),
-                                      const SizedBox(width: 5),
-                                      Flexible(
+                                      FittedBox(
+                                        fit: BoxFit.scaleDown,
+                                        alignment: Alignment.centerLeft,
                                         child: Text(
-                                          'Đang bú (${effectiveFeeding?.formatElapsedCard() ?? "..."})',
-                                          style: const TextStyle(
-                                            fontSize: 11,
-                                            color: AppTheme.brand500,
-                                            fontWeight: FontWeight.bold,
-                                          ),
-                                          overflow: TextOverflow.ellipsis,
-                                        ),
-                                      ),
-                                    ] else ...[
-                                      Flexible(
-                                        child: Text(
-                                          (effectiveFeeding?.lastFeedingEnd != null || effectiveFeeding?.lastFeedingTime != null)
-                                              ? 'Bú xong: ${effectiveFeeding!.formatElapsedCard()}'
-                                              : (breastCount > 0 ? '$breastCount cữ bú mẹ' : 'Hôm nay'),
+                                          '${feeding?.totalMl ?? 0} ml (${feeding?.feedingCount ?? 0} cữ)',
                                           style: TextStyle(
-                                            fontSize: 11,
-                                            color: isDark ? AppTheme.gray400 : AppTheme.gray600,
-                                            fontWeight: FontWeight.w600,
+                                            fontSize: 10.5,
+                                            fontWeight: FontWeight.bold,
+                                            color: isDark ? Colors.white : AppTheme.gray800,
                                           ),
-                                          overflow: TextOverflow.ellipsis,
                                         ),
                                       ),
                                     ],
-                                  ],
+                                  ),
                                 ),
                                 const Spacer(),
                                 const SizedBox(height: 10),
@@ -657,53 +729,77 @@ class _DashboardViewState extends State<DashboardView> {
                                     ),
                                   ],
                                 ),
-                                const SizedBox(height: 12),
+                                const SizedBox(height: 10),
                                 Text(
-                                  sleep?.totalSleepFormatted ?? '0g 0p',
-                                  style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w900),
+                                  isSleeping ? 'Thời gian đang ngủ:' : 'Thời gian thức (Wake):',
+                                  style: TextStyle(
+                                    fontSize: 10.5,
+                                    color: isDark ? AppTheme.gray400 : AppTheme.gray600,
+                                    fontWeight: FontWeight.w600,
+                                  ),
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
                                 ),
-                                const SizedBox(height: 4),
-                                Row(
-                                  children: [
-                                    if (isSleeping) ...[
-                                      Container(
-                                        width: 6,
-                                        height: 6,
-                                        decoration: const BoxDecoration(
-                                          color: Colors.amber,
-                                          shape: BoxShape.circle,
-                                        ),
+                                const SizedBox(height: 2),
+                                FittedBox(
+                                  fit: BoxFit.scaleDown,
+                                  alignment: Alignment.centerLeft,
+                                  child: Text(
+                                    isSleeping
+                                        ? (effectiveSleep?.formatElapsedCard() ?? '...')
+                                        : (effectiveSleep?.lastSleepEnd != null
+                                            ? 'Đã thức: ${effectiveSleep!.formatElapsedCard()}'
+                                            : 'Bé đang thức'),
+                                    style: TextStyle(
+                                      fontSize: 20,
+                                      fontWeight: FontWeight.w900,
+                                      fontFamily: 'monospace',
+                                      color: isSleeping
+                                          ? AppTheme.indigo500
+                                          : (isDark ? const Color(0xFFC7D2FE) : const Color(0xFF1E1B4B)),
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  effectiveSleep?.formatSubtext() ?? '',
+                                  style: TextStyle(
+                                    fontSize: 10.5,
+                                    color: isDark ? AppTheme.gray400 : AppTheme.gray500,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                                const SizedBox(height: 8),
+                                Container(
+                                  width: double.infinity,
+                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                  decoration: BoxDecoration(
+                                    color: isDark ? AppTheme.indigo500.withValues(alpha: 0.15) : AppTheme.indigo50,
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      const Text(
+                                        'Tổng ngủ:',
+                                        style: TextStyle(fontSize: 9.5, color: AppTheme.indigo500, fontWeight: FontWeight.bold),
                                       ),
-                                      const SizedBox(width: 5),
-                                      Flexible(
+                                      FittedBox(
+                                        fit: BoxFit.scaleDown,
+                                        alignment: Alignment.centerLeft,
                                         child: Text(
-                                          'Đang ngủ (${effectiveSleep?.formatElapsedCard() ?? "..."})',
-                                          style: const TextStyle(
-                                            fontSize: 11,
-                                            color: AppTheme.indigo500,
-                                            fontWeight: FontWeight.bold,
-                                          ),
-                                          overflow: TextOverflow.ellipsis,
-                                        ),
-                                      ),
-                                    ] else ...[
-                                      Flexible(
-                                        child: Text(
-                                          effectiveSleep?.lastSleepEnd != null
-                                              ? 'Đã thức: ${effectiveSleep!.formatElapsedCard()}'
-                                              : 'Hôm nay',
+                                          '${sleep?.totalSleepFormatted ?? "0g 0p"} (${sleep?.sleepCount ?? 0} giấc)',
                                           style: TextStyle(
-                                            fontSize: 11,
-                                            color: isDark ? AppTheme.gray400 : AppTheme.gray600,
-                                            fontWeight: FontWeight.w600,
+                                            fontSize: 10.5,
+                                            fontWeight: FontWeight.bold,
+                                            color: isDark ? Colors.white : AppTheme.gray800,
                                           ),
-                                          overflow: TextOverflow.ellipsis,
                                         ),
                                       ),
                                     ],
-                                  ],
+                                  ),
                                 ),
                                 const Spacer(),
                                 const SizedBox(height: 10),

@@ -188,7 +188,25 @@ class FeedingSummaryModel {
         return _formatLiveElapsedAgo(diffSec);
       } catch (_) {}
     }
-    return 'Chưa có';
+    return 'Chưa có cữ';
+  }
+
+  String formatSubtext([DateTime? now]) {
+    if (isCurrentlyFeeding && currentFeedingStart != null) {
+      try {
+        final start = DateTime.parse(currentFeedingStart!).toLocal();
+        return 'Bắt đầu ${_formatTimeOnly(start)}';
+      } catch (_) {}
+      return 'Đang bú sữa';
+    }
+    final refTime = lastFeedingEnd ?? lastFeedingTime;
+    if (refTime != null) {
+      try {
+        final endDt = DateTime.parse(refTime).toLocal();
+        return 'Xong lúc ${_formatTimeOnly(endDt)}';
+      } catch (_) {}
+    }
+    return 'Chưa ghi nhận cữ';
   }
 
   factory FeedingSummaryModel.fromJson(Map<String, dynamic> json) {
@@ -283,7 +301,24 @@ class SleepSummaryModel {
         return _formatLiveDuration(diffSec);
       } catch (_) {}
     }
-    return 'Chưa có';
+    return 'Bé đang thức';
+  }
+
+  String formatSubtext([DateTime? now]) {
+    if (isCurrentlySleeping && currentSleepStart != null) {
+      try {
+        final start = DateTime.parse(currentSleepStart!).toLocal();
+        return 'Ngủ từ ${_formatTimeOnly(start)}';
+      } catch (_) {}
+      return 'Đang ngủ say';
+    }
+    if (lastSleepEnd != null) {
+      try {
+        final end = DateTime.parse(lastSleepEnd!).toLocal();
+        return 'Dậy lúc ${_formatTimeOnly(end)}';
+      } catch (_) {}
+    }
+    return 'Bé đang thức';
   }
 
   factory SleepSummaryModel.fromJson(Map<String, dynamic> json) {
